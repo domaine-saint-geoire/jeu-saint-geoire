@@ -131,16 +131,25 @@ dialog button{margin-top:14px}
     </div>
     <div class="sec" id="collSec">
       <h2>Collision — le joueur bute-t-il dessus ?</h2>
-      <label class="row" style="cursor:pointer"><input type="checkbox" id="cTrav" style="width:auto;accent-color:var(--accent)"> <span style="color:var(--ink)">Traversable (on passe à travers)</span></label>
-      <div class="row"><label>Forme</label>
-        <select id="cForme" style="flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px">
-          <option value="boite">Boîte (par défaut)</option>
-          <option value="cylindre">Cylindre (objet rond)</option>
-          <option value="sphere">Sphère</option>
-        </select>
+      <div class="mut" style="font-size:11.5px;line-height:1.5;margin-bottom:7px">Choisis <b>un</b> mode (obligatoire). Le contour <span style="color:var(--accent)">orange</span> dans l'aperçu montre la zone solide.</div>
+      <label class="row" style="cursor:pointer;gap:8px"><input type="radio" name="cMode" id="cModeAuto" style="width:auto;accent-color:var(--accent)"> <span style="color:var(--ink)">📦 Générer un collider (boîte auto)</span></label>
+      <label class="row" style="cursor:pointer;gap:8px"><input type="radio" name="cMode" id="cModeSur" style="width:auto;accent-color:var(--accent)"> <span style="color:var(--ink)">🎯 Collider sur-mesure (mon fichier)</span></label>
+      <label class="row" style="cursor:pointer;gap:8px"><input type="radio" name="cMode" id="cModeTrav" style="width:auto;accent-color:var(--accent)"> <span style="color:var(--ink)">👻 Traversable (on passe à travers)</span></label>
+      <div id="cSurBloc" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:9px">
+        <div id="cDrop" style="border:2px dashed var(--line);border-radius:9px;padding:11px;text-align:center;font-size:12.5px;color:var(--muted);cursor:pointer">⬇️ <b>Glisse ton fichier collider .glb</b><br><span style="font-size:11.5px">ou clique pour le choisir</span></div>
+        <input type="file" id="cFileGlb" accept=".glb,model/gltf-binary" hidden>
+        <div id="cReglages" style="display:none;margin-top:8px">
+          <div class="mut" style="font-size:11px;margin-bottom:4px">Placer le solide invisible pile sur l'objet :</div>
+          <div class="row"><label>Position X</label><input type="number" id="cPX" step="0.05" value="0"></div>
+          <div class="row"><label>Position Y</label><input type="number" id="cPY" step="0.05" value="0"></div>
+          <div class="row"><label>Position Z</label><input type="number" id="cPZ" step="0.05" value="0"></div>
+          <div class="row"><label>Rotation</label><input type="range" id="cRotR" min="0" max="359" step="1" value="0"><input type="number" id="cRot" step="1" value="0"></div>
+          <div class="row"><label>Inclinaison</label><input type="range" id="cTiltR" min="-90" max="90" step="1" value="0"><input type="number" id="cTilt" step="1" value="0"></div>
+          <div class="row"><label>Taille X</label><input type="number" id="cSX" step="0.05" value="1"></div>
+          <div class="row"><label>Taille Y</label><input type="number" id="cSY" step="0.05" value="1"></div>
+          <div class="row"><label>Taille Z</label><input type="number" id="cSZ" step="0.05" value="1"></div>
+        </div>
       </div>
-      <div class="row"><label>Serrage</label><input type="range" id="cMargeR" min="0.5" max="1.5" step="0.05" value="1"><input type="number" id="cMarge" step="0.05" value="1"></div>
-      <div class="mut" style="font-size:11.5px;line-height:1.5">Le contour orange dans l'aperçu 3D montre la zone solide qui bloque le joueur. « Traversable » = pas de collision (herbe, buisson…).</div>
     </div>
     <div class="sec"><h2>Vérification fluidité (automatique)</h2><div id="checks"></div></div>
     <div class="sec"><h2>Mes objets</h2><div id="list"></div></div>
@@ -192,6 +201,15 @@ dialog button{margin-top:14px}
       <li><b>Regarde le verdict</b> : ✅ vert = parfait. ⚠️ rouge = trop lourd, l'atelier te dit quoi faire.</li>
     </ol>
     <p>Ton travail se <b>sauvegarde tout seul</b> dans ton navigateur : tu peux fermer et revenir plus tard.</p>
+
+    <h2>D-bis — La collision (le joueur bute-t-il dessus ?)</h2>
+    <p>Pour <b>chaque</b> objet, tu choisis <b>obligatoirement</b> un des 3 modes (sinon l'atelier refuse d'exporter). Le contour <b>orange</b> dans l'aperçu montre la zone solide.</p>
+    <ul>
+      <li><b>📦 Générer un collider</b> — l'atelier crée une <b>boîte</b> automatique autour de l'objet. Simple et rapide : parfait pour un banc, un rocher, une caisse.</li>
+      <li><b>🎯 Collider sur-mesure</b> — tu <b>glisses un 2ᵉ fichier .glb</b> qui est la forme solide exacte. Tu peux ensuite le <b>déplacer, tourner et redimensionner</b> pour le poser pile sur ton objet (tu le vois en orange). À utiliser quand la boîte ne suffit pas : une arche, un pont, une forme creuse.</li>
+      <li><b>👻 Traversable</b> — <b>pas de collision</b>, on passe à travers : herbe, buisson, décor purement visuel.</li>
+    </ul>
+    <div class="box"><b>Astuce collider sur-mesure :</b> modélise-le au <b>même endroit</b> que ton objet dans ton logiciel 3D → il tombe déjà bien placé. Et reste simple (quelques faces) : c'est un mur invisible, personne ne le voit.</div>
 
     <h2>E — Envoie le résultat à Gaétan</h2>
     <ol>
@@ -4353,17 +4371,26 @@ var collHelper=null;
 function majCollHelper(){
   if(collHelper){ holder.remove(collHelper); collHelper=null; }
   if(!selObj||!selObj._scene) return;
-  var col=selObj.collider||{};
-  if(col.traversable) return;                 // traversable = pas de zone solide à montrer
-  var d=selObj.dims||[1,1,1], m=col.marge||1, c=selObj.collCentre||[0,0,0];
-  var geo;
-  if(col.forme==='cylindre'){ var r=Math.max(d[0],d[2])/2*m; geo=new THREE.CylinderGeometry(r,r,d[1]*m,16); }
-  else if(col.forme==='sphere'){ var rr=Math.max(d[0],d[1],d[2])/2*m; geo=new THREE.SphereGeometry(rr,16,10); }
-  else { geo=new THREE.BoxGeometry(d[0]*m,d[1]*m,d[2]*m); }
-  var edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0xE5A83E}));
-  edges.position.set(c[0],c[1],c[2]);
-  // même transformation que l'objet (échelle + rotation + hauteur)
-  var wrap=new THREE.Group(); wrap.add(edges);
+  var mode=selObj.collMode, contenu=null;
+  if(mode==='auto'){
+    // boîte englobante de l'objet, en contour orange
+    var d=selObj.dims||[1,1,1], c=selObj.collCentre||[0,0,0];
+    var edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(d[0],d[1],d[2])), new THREE.LineBasicMaterial({color:0xE5A83E}));
+    edges.position.set(c[0],c[1],c[2]);
+    contenu=edges;
+  } else if(mode==='sur-mesure' && selObj._collScene){
+    // le fichier collider, en fil-de-fer orange, avec SES réglages (position/rotation/taille)
+    var clone=selObj._collScene.clone();
+    var mat=new THREE.MeshBasicMaterial({color:0xE5A83E,wireframe:true});
+    clone.traverse(function(n){ if(n.isMesh) n.material=mat; });
+    var p=selObj.collPos||[0,0,0], sz=selObj.collSize||[1,1,1];
+    clone.position.set(p[0],p[1],p[2]);
+    clone.scale.set(sz[0],sz[1],sz[2]);
+    clone.rotation.order='YXZ'; clone.rotation.y=rad(selObj.collRot||0); clone.rotation.x=rad(selObj.collTilt||0);
+    contenu=clone;
+  } else { return; } // 'traversable' ou pas encore choisi → rien à montrer
+  // même transformation globale que l'objet (échelle + rotation + hauteur)
+  var wrap=new THREE.Group(); wrap.add(contenu);
   var s=selObj.scale||1; wrap.scale.set(s,s,s);
   wrap.rotation.order='YXZ'; wrap.rotation.y=rad(selObj.rotDeg||0); wrap.rotation.x=rad(selObj.tiltDeg||0);
   wrap.position.set(0,selObj.yOffset||0,0);
@@ -4414,15 +4441,20 @@ function addGlb(fileName, buf, meta, silent){
       tri:Math.round(tri),
       bytes:buf.byteLength,
       dims:[size.x,size.y,size.z],
-      // Centre de la boîte englobante (repère local du .glb) : base des colliders.
+      // Centre de la boîte englobante (repère local du .glb) : base du collider auto.
       collCentre:[centre.x,centre.y,centre.z],
-      // collider = forme de collision. traversable = le joueur passe au travers ;
-      // marge = facteur de serrage de la taille. Par défaut : boîte pleine, solide.
-      collider:(meta&&meta.collider)
-        ? {forme:meta.collider.forme||'boite', traversable:!!meta.collider.traversable, marge:(meta.collider.marge!=null?meta.collider.marge:1)}
-        : {forme:'boite', traversable:false, marge:1}
+      // collMode : mode de collision — null (à CHOISIR), 'auto', 'sur-mesure' ou 'traversable'.
+      collMode:(meta&&meta.collider&&meta.collider.mode)||null,
+      // Collider sur-mesure : 2e .glb (base64) + ses réglages relatifs à l'objet.
+      collGlb:(meta&&meta.collider&&meta.collider.glb)||null,
+      collPos:(meta&&meta.collider&&meta.collider.pos)?meta.collider.pos.slice():[0,0,0],
+      collRot:(meta&&meta.collider&&meta.collider.rotDeg)||0,
+      collTilt:(meta&&meta.collider&&meta.collider.tiltDeg)||0,
+      collSize:(meta&&meta.collider&&meta.collider.scale)?meta.collider.scale.slice():[1,1,1]
     };
     o._scene=sc;
+    // Reprise d'un export : recharge aussi le collider sur-mesure s'il y en a un.
+    if(o.collGlb){ try{ gltfLoader.parse(b64ToBuf(o.collGlb),'',function(g){ o._collScene=g.scene; if(o===selObj) applyPrev(); }); }catch(e){} }
     objs.push(o);
     select(o);
     changed();
@@ -4492,25 +4524,58 @@ function syncProps(){
   syncCollider();
 }
 
-/* ---------- collision (collider) : réglages de la zone solide ---------- */
+/* ---------- collision : 3 modes (auto / sur-mesure / traversable), obligatoire ---------- */
 function syncCollider(){
   var has=!!selObj;
-  var c=(selObj&&selObj.collider)||{forme:'boite',traversable:false,marge:1};
-  $('cTrav').disabled=!has;
-  $('cForme').disabled=!has||!!c.traversable;
-  $('cMargeR').disabled=$('cMarge').disabled=!has||!!c.traversable;
-  if(!has) return;
-  $('cTrav').checked=!!c.traversable;
-  $('cForme').value=c.forme||'boite';
-  $('cMargeR').value=$('cMarge').value=(c.marge!=null?c.marge:1);
+  ['cModeAuto','cModeSur','cModeTrav'].forEach(function(id){ $(id).disabled=!has; });
+  if(!has){ $('cModeAuto').checked=$('cModeSur').checked=$('cModeTrav').checked=false; $('cSurBloc').style.display='none'; return; }
+  var m=selObj.collMode;
+  $('cModeAuto').checked=(m==='auto');
+  $('cModeSur').checked=(m==='sur-mesure');
+  $('cModeTrav').checked=(m==='traversable');
+  $('cSurBloc').style.display=(m==='sur-mesure')?'block':'none';
+  $('cReglages').style.display=(m==='sur-mesure'&&selObj.collGlb)?'block':'none';
+  if(m==='sur-mesure'){
+    var p=selObj.collPos||[0,0,0], sz=selObj.collSize||[1,1,1];
+    $('cPX').value=p[0]; $('cPY').value=p[1]; $('cPZ').value=p[2];
+    $('cRotR').value=$('cRot').value=selObj.collRot||0;
+    $('cTiltR').value=$('cTilt').value=selObj.collTilt||0;
+    $('cSX').value=sz[0]; $('cSY').value=sz[1]; $('cSZ').value=sz[2];
+  }
 }
-$('cTrav').onchange=function(){ if(!selObj) return; selObj.collider.traversable=this.checked; syncCollider(); applyPrev(); saveLS(); };
-$('cForme').onchange=function(){ if(!selObj) return; selObj.collider.forme=this.value; applyPrev(); saveLS(); };
+function setMode(m){ if(!selObj) return; selObj.collMode=m; syncCollider(); applyPrev(); renderChecks(); saveLS(); }
+$('cModeAuto').onchange=function(){ if(this.checked) setMode('auto'); };
+$('cModeSur').onchange=function(){ if(this.checked) setMode('sur-mesure'); };
+$('cModeTrav').onchange=function(){ if(this.checked) setMode('traversable'); };
+
+/* import du fichier collider sur-mesure (glisser ou cliquer) */
+function chargerColliderFichier(file){
+  if(!file||!selObj) return;
+  if(!/\.glb$/i.test(file.name)){ showDlg('<h3>😕 Mauvais format</h3><p>Le collider doit être un fichier <b>.glb</b>.</p><button onclick="this.closest(\'dialog\').close()">OK</button>'); return; }
+  var rd=new FileReader();
+  rd.onload=function(){
+    gltfLoader.parse(rd.result,'',function(gltf){
+      selObj.collGlb=bufToB64(rd.result);
+      selObj._collScene=gltf.scene;
+      syncCollider(); applyPrev(); saveLS();
+    },function(){ showDlg('<h3>😕 Collider illisible</h3><p>Je n\'arrive pas à lire ce .glb.</p><button onclick="this.closest(\'dialog\').close()">OK</button>'); });
+  };
+  rd.readAsArrayBuffer(file);
+}
+$('cDrop').onclick=function(){ $('cFileGlb').click(); };
+$('cFileGlb').onchange=function(){ chargerColliderFichier(this.files[0]); this.value=''; };
+['dragover','dragenter'].forEach(function(ev){ $('cDrop').addEventListener(ev,function(e){ e.preventDefault(); $('cDrop').style.borderColor='#E5A83E'; }); });
+['dragleave','drop'].forEach(function(ev){ $('cDrop').addEventListener(ev,function(e){ e.preventDefault(); $('cDrop').style.borderColor=''; }); });
+$('cDrop').addEventListener('drop',function(e){ e.preventDefault(); chargerColliderFichier(e.dataTransfer.files[0]); });
+
+/* réglages du collider sur-mesure (position / rotation / taille) */
 (function(){
-  var r=$('cMargeR'), n=$('cMarge');
-  function set(v){ if(!selObj) return; v=parseFloat(v); if(isNaN(v)) return; selObj.collider.marge=v; r.value=v; n.value=v; applyPrev(); saveLS(); }
-  r.oninput=function(){ set(r.value); };
-  n.oninput=function(){ set(n.value); };
+  function num(id,setter){ $(id).oninput=function(){ if(!selObj) return; var v=parseFloat(this.value); if(isNaN(v)) return; setter(v); applyPrev(); saveLS(); }; }
+  num('cPX',function(v){ selObj.collPos[0]=v; }); num('cPY',function(v){ selObj.collPos[1]=v; }); num('cPZ',function(v){ selObj.collPos[2]=v; });
+  num('cSX',function(v){ selObj.collSize[0]=v; }); num('cSY',function(v){ selObj.collSize[1]=v; }); num('cSZ',function(v){ selObj.collSize[2]=v; });
+  function pair(rid,nid,setter){ var r=$(rid),n=$(nid); function s(v){ if(!selObj)return; v=parseFloat(v); if(isNaN(v))return; setter(v); r.value=v; n.value=v; applyPrev(); saveLS(); } r.oninput=function(){s(r.value);}; n.oninput=function(){s(n.value);}; }
+  pair('cRotR','cRot',function(v){ selObj.collRot=v; });
+  pair('cTiltR','cTilt',function(v){ selObj.collTilt=v; });
 })();
 
 /* ---------- vérifications ---------- */
@@ -4561,17 +4626,28 @@ function select(o){
 
 /* ---------- export / import ---------- */
 function exportData(){
-  return { version:2, quoi:'Décors 3D du Domaine de Saint-Geoire (fait avec l\'atelier)', decors: objs.map(function(o){
-    var col=o.collider||{forme:'boite',traversable:false,marge:1};
-    return { name:o.name, file:o.file, at:o.at, scale:o.scale, rotDeg:o.rotDeg, tiltDeg:o.tiltDeg, yOffset:o.yOffset,
-      // collider = forme de collision pour le jeu. bbox/centre = boîte englobante brute du .glb ;
-      // le jeu applique ensuite l'échelle + la rotation de l'objet, et 'marge' (serrage).
-      collider:{ forme:col.forme, traversable:!!col.traversable, marge:col.marge, bbox:o.dims, centre:o.collCentre },
-      glb:o.glb };
+  return { version:3, quoi:'Décors 3D du Domaine de Saint-Geoire (fait avec l\'atelier)', decors: objs.map(function(o){
+    // collider selon le mode choisi par Thomas.
+    var col;
+    if(o.collMode==='traversable') col={ mode:'traversable' };
+    else if(o.collMode==='auto')   col={ mode:'auto', bbox:o.dims, centre:o.collCentre };
+    else if(o.collMode==='sur-mesure') col={ mode:'sur-mesure', glb:o.collGlb||null, pos:o.collPos, rotDeg:o.collRot, tiltDeg:o.collTilt, scale:o.collSize };
+    else col={ mode:null }; // non choisi (l'export est bloqué avant d'arriver ici)
+    return { name:o.name, file:o.file, at:o.at, scale:o.scale, rotDeg:o.rotDeg, tiltDeg:o.tiltDeg, yOffset:o.yOffset, collider:col, glb:o.glb };
   }) };
 }
+/** Objets sans collision valide (mode non choisi, ou sur-mesure sans fichier). */
+function objetsSansCollision(){ return objs.filter(function(o){ return !o.collMode || (o.collMode==='sur-mesure' && !o.collGlb); }); }
 $('btnExport').onclick=function(){
   if(!objs.length){ showDlg('<h3>Rien à exporter</h3><p>Charge d\'abord un objet .glb et pose-le sur la carte.</p><button onclick="this.closest(\'dialog\').close()">OK</button>'); return; }
+  // Collision OBLIGATOIRE : on refuse d'exporter tant qu'un objet n'a pas de mode choisi.
+  var sansColl=objetsSansCollision();
+  if(sansColl.length){
+    showDlg('<h3>⚠️ Collision à choisir</h3><p>Choisis un mode de collision (📦 auto, 🎯 sur-mesure ou 👻 traversable) pour :</p><ul style="margin:8px 0;padding-left:20px">'+
+      sansColl.map(function(o){ return '<li>« '+esc(o.name)+' »'+(o.collMode==='sur-mesure'?' <span class="warn">(fichier collider manquant)</span>':'')+'</li>'; }).join('')+
+      '</ul><p class="mut">L\'export est bloqué tant que ce n\'est pas fait.</p><button class="primary" onclick="this.closest(\'dialog\').close()">OK</button>');
+    return;
+  }
   var bad=objs.filter(function(o){ return o.tri>TRI_MAX||o.bytes/1024>KB_MAX; });
   var blob=new Blob([JSON.stringify(exportData())],{type:'application/json'});
   var a=document.createElement('a');
