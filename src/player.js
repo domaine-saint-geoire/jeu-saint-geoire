@@ -20,6 +20,8 @@ export class Player {
     this.controls = controls;
     this.onHorsLimites = onHorsLimites;
     this._horsAvant = false;
+    // Empreintes de collision des décors (rectangles au sol), remplies par le chargeur de décors.
+    this.collideursDecors = [];
 
     // Spawn provisoire : au centre de la carte (réglé plus tard).
     this.position = new THREE.Vector3(0, 0, 0);
@@ -59,12 +61,21 @@ export class Player {
     camera.rotateX(this.controls.pitch);
   }
 
-  /** Applique (dx,dz) en respectant la limite dure, axe par axe (glissement le long des murs). */
+  /** (x,z) est-il solide ? (limite dure de la carte OU empreinte d'un décor) */
+  _bloque(x, z) {
+    if (this.carte.zoneAt(x, z).bloque) return true;
+    for (const f of this.collideursDecors) {
+      if (x >= f.minX && x <= f.maxX && z >= f.minZ && z <= f.maxZ) return true;
+    }
+    return false;
+  }
+
+  /** Applique (dx,dz) en respectant les obstacles, axe par axe (glissement le long des murs). */
   _deplacerAvecCollision(dx, dz) {
     const nx = this.position.x + dx;
-    if (!this.carte.zoneAt(nx, this.position.z).bloque) this.position.x = nx;
+    if (!this._bloque(nx, this.position.z)) this.position.x = nx;
     const nz = this.position.z + dz;
-    if (!this.carte.zoneAt(this.position.x, nz).bloque) this.position.z = nz;
+    if (!this._bloque(this.position.x, nz)) this.position.z = nz;
 
     // Ne jamais sortir du carré de la carte.
     const demi = this.carte.tailleM / 2 - 0.5;

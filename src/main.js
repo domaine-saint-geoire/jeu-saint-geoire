@@ -19,6 +19,7 @@ import { UI } from './ui.js';
 import { Menu } from './menu.js';
 import { Net } from './net.js';
 import { installerBoiteAIdees } from './ideas.js';
+import { chargerDecors } from './decors.js';
 
 async function demarrer() {
   const ui = new UI();
@@ -27,6 +28,9 @@ async function demarrer() {
   // Carte (2 images) + terrain.
   const carte = await Carte.charger();
   scene.add(construireTerrain(carte));
+
+  // Décors créés dans l'atelier (objets + collisions). Vide si pas de fichier decors.json.
+  const empreintesDecors = await chargerDecors(scene, carte);
 
   // État de la partie.
   let pseudo = 'Anonyme';
@@ -43,6 +47,7 @@ async function demarrer() {
   function lancerPartie(mode) {
     controls = new Controls(renderer.domElement);
     player = new Player(carte, controls, (hors) => ui.horsLimites(hors));
+    player.collideursDecors = empreintesDecors;   // collisions des décors
     if (mode === 'multi') net = new Net(scene, pseudo);
     enJeu = true;
     ui.invite.style.display = 'flex';
