@@ -161,67 +161,43 @@ dialog button{margin-top:14px}
 <div id="guideOv">
   <div class="gwrap">
     <button id="gClose" class="primary">✕ Fermer le guide</button>
-    <h1>📖 Tu vas mettre tes objets 3D dans le jeu</h1>
-    <p>Salut Thomas ! J'ai construit le domaine de Saint-Geoire en 3D, on y joue sur nos téléphones. Toi, tu crées les décors : tout ce que tu fabriques apparaît dans le monde, pour tout le monde. Voici comment, de A à Z.</p>
-    <div class="box"><b>Avant tout :</b> 100 % gratuit — tu n'as <b>rien à payer</b>, jamais. Si tu veux garder ta <b>licence Creo</b>, tu peux, c'est même un plus (voir plus bas). Et tu n'as besoin ni de mon PC, ni d'un compte quoi que ce soit : tout se fait depuis chez toi, dans cette page.</div>
+    <h1>Guide de l'atelier de décors</h1>
+    <p>Cet atelier sert à ajouter des objets 3D au jeu du domaine de Saint-Geoire. Le principe : <b>importer</b> un fichier <code>.glb</code>, le <b>poser</b> sur la carte, définir sa <b>collision</b>, puis <b>exporter</b>. Les objets exportés sont ensuite intégrés au jeu.</p>
 
-    <h2>👀 D'abord, visite le jeu</h2>
-    <p>Pour savoir <b>quoi</b> créer et <b>où</b>, balade-toi dans le monde : Gaétan t'envoie le lien de la partie quand il la lance — il s'ouvre <b>sur ton tel comme sur ton PC</b>, direct dans le navigateur. Repère les endroits vides ou moches : un banc devant la maison, la vraie fontaine, une statue, un pont plus joli, des rochers vers la cascade… <b>Dis-lui ce que tu comptes faire</b>, comme ça vous ne bossez pas en double.</p>
-
-    <h2>A — Choisis ton logiciel (gratuit)</h2>
-    <p><b>Laisse tomber Unity</b> : c'est un moteur de jeu, pas un outil pour créer des objets. Ce qu'il te faut, c'est un <b>modeleur</b>. Le seul truc qui compte à la fin : exporter un fichier <b><code>.glb</code></b>.</p>
+    <h2>1 · Préparer l'objet</h2>
     <ul>
-      <li><b>Spline</b> (spline.design) — mobilier, déco. Dans le navigateur, le plus facile pour démarrer. Gratuit.</li>
-      <li><b>Womp</b> (womp.com) — rochers, arbres, formes arrondies. Navigateur aussi. Gratuit.</li>
-      <li><b>Blender</b> (blender.org) — tout, le standard des pros. Plus dur au début, plein de tutos YouTube. Gratuit.</li>
-    </ul>
-    <div class="box"><b>Et Creo ?</b> Garde-le si tu l'aimes, c'est un excellent modeleur. Deux choses : il ne sort pas de <code>.glb</code> directement → exporte en <b>OBJ</b> ou <b>STEP</b> puis passe par un convertisseur en ligne gratuit (cherche « OBJ to GLB converter »). Et Creo fait des modèles très lourds — la vérification automatique en bas à droite te le dira, dans ce cas simplifie ou refais-le dans Spline.</div>
-
-    <h2>B — Crée ton objet : 3 règles</h2>
-    <ul>
-      <li><b>Travaille en mètres.</b> Un banc ≈ 1,7 m de long, une porte ≈ 2 m de haut. (Si ton logiciel est en millimètres, l'objet sortira 1000× trop grand — l'atelier te préviendra.)</li>
-      <li><b>Reste simple.</b> On joue sur téléphone en 4G : un objet trop détaillé fait ramer tout le monde. Un objet stylé et simple &gt; un objet parfait mais lourd.</li>
-      <li><b>Le bas de l'objet au niveau 0</b>, comme ça il se pose tout seul sur le sol du jeu.</li>
-    </ul>
-    <p>Pas besoin de lumières ni de caméra dans ton fichier : juste la forme et les couleurs.</p>
-
-    <h2>C — Exporte en .glb</h2>
-    <ul>
-      <li><b>Spline :</b> Export → 3D Model → <b>GLB</b></li>
-      <li><b>Womp :</b> Export → <b>GLB</b></li>
-      <li><b>Blender :</b> Fichier → Exporter → <b>glTF 2.0 (.glb)</b></li>
-      <li><b>Creo :</b> exporte OBJ/STEP → convertisseur en ligne → <b>GLB</b></li>
+      <li><b>Format : <code>.glb</code></b> (glTF binaire). Export depuis la plupart des modeleurs — Blender : <i>Fichier → Exporter → glTF 2.0</i> ; Spline / Womp : <i>Export → GLB</i>. Depuis un format non-GLB (OBJ, STEP…), utiliser un convertisseur en ligne « … to GLB ».</li>
+      <li><b>À l'échelle réelle, en mètres</b> (un banc ≈ 1,7 m). L'atelier signale un objet visiblement exporté en millimètres.</li>
+      <li><b>Léger</b> : le jeu tourne aussi sur téléphone. Les limites (triangles, poids) sont indiquées par la vérification automatique.</li>
+      <li><b>Base au niveau 0</b> pour que l'objet se pose correctement sur le sol.</li>
     </ul>
 
-    <h2>D — Pose-le sur la carte (ici même !)</h2>
-    <ol>
-      <li><b>Glisse ton fichier .glb</b> dans la zone à droite. Ton objet apparaît en 3D à côté d'un bonhomme de 1,80 m → tu vois direct si la taille est bonne.</li>
-      <li><b>Clique sur la carte</b> (la vraie carte du domaine, vue du ciel) pour le poser. Molette = zoom pour viser précis, re-clique pour le déplacer.</li>
-      <li><b>Règle-le</b> : nom, taille, rotation, inclinaison, hauteur.</li>
-      <li><b>Regarde le verdict</b> : ✅ vert = parfait. ⚠️ rouge = trop lourd, l'atelier te dit quoi faire.</li>
-    </ol>
-    <p>Ton travail se <b>sauvegarde tout seul</b> dans ton navigateur : tu peux fermer et revenir plus tard.</p>
+    <h2>2 · Importer</h2>
+    <p>Glisser le <code>.glb</code> dans la zone d'import (à droite), ou cliquer pour le sélectionner. L'objet apparaît dans l'aperçu 3D à côté d'un repère de <b>1,80 m</b> pour juger la taille.</p>
 
-    <h2>D-bis — La collision (le joueur bute-t-il dessus ?)</h2>
-    <p>Pour <b>chaque</b> objet, tu choisis <b>obligatoirement</b> un des 3 modes (sinon l'atelier refuse d'exporter). Le contour <b>orange</b> dans l'aperçu montre la zone solide.</p>
+    <h2>3 · Poser sur la carte</h2>
+    <p>Cliquer sur la carte (vue aérienne) pour placer l'objet ; molette pour zoomer, re-clic pour déplacer. Réglages à droite : <b>nom</b>, <b>taille</b>, <b>rotation</b>, <b>inclinaison</b>, <b>hauteur</b>.</p>
+
+    <h2>4 · Définir la collision <span style="font-weight:400;font-size:.85em">(obligatoire)</span></h2>
+    <p>Pour <b>chaque</b> objet, choisir <b>un</b> des 3 modes — l'export est refusé tant qu'un objet n'en a pas. Le contour <b>orange</b> dans l'aperçu montre la zone solide.</p>
     <ul>
-      <li><b>📦 Générer un collider</b> — l'atelier crée une <b>boîte</b> automatique autour de l'objet. Simple et rapide : parfait pour un banc, un rocher, une caisse.</li>
-      <li><b>🎯 Collider sur-mesure</b> — tu <b>glisses un 2ᵉ fichier .glb</b> qui est la forme solide exacte. Tu peux ensuite le <b>déplacer, tourner et redimensionner</b> pour le poser pile sur ton objet (tu le vois en orange). À utiliser quand la boîte ne suffit pas : une arche, un pont, une forme creuse.</li>
-      <li><b>👻 Traversable</b> — <b>pas de collision</b>, on passe à travers : herbe, buisson, décor purement visuel.</li>
+      <li><b>📦 Générer un collider</b> — une <b>boîte</b> automatique. Pour les objets pleins et simples (banc, rocher, caisse).</li>
+      <li><b>🎯 Collider sur-mesure</b> — importer un <b>2ᵉ <code>.glb</code></b> servant de forme solide, puis l'ajuster (<b>position, rotation, taille</b>) pour l'aligner sur l'objet. Pour les formes creuses ou complexes (arche, pont…). <i>Conseil : le modéliser au même emplacement que l'objet et le garder simple — c'est un mur invisible.</i></li>
+      <li><b>👻 Traversable</b> — aucune collision (herbe, buisson, décor purement visuel).</li>
     </ul>
-    <div class="box"><b>Astuce collider sur-mesure :</b> modélise-le au <b>même endroit</b> que ton objet dans ton logiciel 3D → il tombe déjà bien placé. Et reste simple (quelques faces) : c'est un mur invisible, personne ne le voit.</div>
 
-    <h2>E — Envoie le résultat à Gaétan</h2>
-    <ol>
-      <li>Clique <b>« 📦 Exporter pour Gaétan »</b> (en haut) → un fichier <code>decors-saint-geoire.json</code> arrive dans tes <b>Téléchargements</b>.</li>
-      <li><b>Envoie-le lui</b> par WhatsApp (ou mail). C'est tout ce que tu as à faire.</li>
-      <li>Il le glisse dans le jeu (10 secondes pour lui) et lance une partie : <b>tes objets sont dans le monde</b>, tu peux te balader autour depuis ton tel ou ton PC. 🎉</li>
-    </ol>
+    <h2>5 · Vérifier</h2>
+    <p>La vérification automatique (bas à droite) indique le nombre de triangles, le poids, et un verdict : <span class="ok">✅ prêt</span> ou <span class="warn">⚠️ à alléger</span>.</p>
 
-    <h2>F — Pour corriger</h2>
-    <p>Un objet mal placé, trop grand, mal tourné ? Reviens ici (tout est encore là), ajuste, ré-exporte, renvoie le fichier. Si tu changes de navigateur ou d'ordi, utilise le bouton <b>« 📂 Reprendre »</b> avec le dernier fichier que tu as envoyé : il recharge tout.</p>
+    <h2>6 · Exporter</h2>
+    <p>Bouton <b>« 📦 Exporter »</b> : un fichier <code>decors-saint-geoire.json</code> est téléchargé — il contient tout (objets, réglages, colliders). Le transmettre pour l'intégration au jeu.</p>
 
-    <div class="box"><b>Commence petit :</b> fais d'abord un truc tout simple (un banc, un lampadaire) et envoie-le pour vérifier que toute la chaîne marche. Ensuite, attaque les gros morceaux : la vraie fontaine, la serre, une statue… <b>Tu bloques ?</b> Envoie un message à Gaétan.</div>
+    <h2>Divers</h2>
+    <ul>
+      <li>Le travail est <b>sauvegardé automatiquement</b> dans le navigateur.</li>
+      <li>Reprendre sur un autre appareil : bouton <b>« 📂 Reprendre »</b> avec le dernier fichier exporté.</li>
+      <li>Corriger un objet : le re-sélectionner, ajuster, ré-exporter.</li>
+    </ul>
     <button class="primary" onclick="document.getElementById('guideOv').classList.remove('on')">✕ Fermer le guide</button>
   </div>
 </div>
