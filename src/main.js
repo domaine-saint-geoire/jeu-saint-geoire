@@ -70,9 +70,17 @@ async function demarrer() {
       // Mode « loup » : on tente de démarrer une manche dès qu'on est connecté.
       if (mode === 'loup') setTimeout(() => net.demarrerLoup(), 1500);
     }
+    // Textes d'aide selon PC / téléphone.
+    document.getElementById('inviteTitre').textContent = controls.tactile ? 'Touche pour explorer' : 'Clique pour explorer';
+    document.getElementById('inviteAide').textContent = controls.tactile
+      ? 'Manette à gauche pour marcher · glisse à droite pour regarder'
+      : 'ZQSD / WASD pour marcher · souris pour regarder · Maj pour courir · Échap pour la pause';
+
     enJeu = true;
     ui.invite.style.display = 'flex';
-    ui.invite.onclick = () => { ui.masquerInvite(); renderer.domElement.requestPointerLock(); };
+    // PC : le clic verrouille la souris. Téléphone : on entre direct (la manette gère tout).
+    ui.invite.onclick = () => { ui.masquerInvite(); if (!controls.tactile) renderer.domElement.requestPointerLock(); };
+    majOrientation();
   }
 
   // Échap → la souris se déverrouille → on remontre l'invite (pause),
@@ -81,6 +89,21 @@ async function demarrer() {
     const ecrit = document.activeElement && document.activeElement.id === 'chatInput';
     if (enJeu && !ecrit && document.pointerLockElement !== renderer.domElement) ui.invite.style.display = 'flex';
   });
+
+  // Plein écran (⛶). Sur iPhone l'API n'existe pas → petit conseil à la place.
+  document.getElementById('btnPlein').onclick = () => {
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    else alert("Sur iPhone, le plein écran web n'existe pas. Astuce : mets-toi en paysage, ou ajoute la page à ton écran d'accueil (Partager → « Sur l'écran d'accueil ») pour l'avoir en plein écran.");
+  };
+
+  // Astuce « tourne ton téléphone » : mobile en portrait, pendant une partie.
+  function majOrientation() {
+    const portrait = window.innerHeight > window.innerWidth;
+    document.getElementById('rotate').style.display = (enJeu && controls && controls.tactile && portrait) ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', majOrientation);
+  window.addEventListener('orientationchange', () => setTimeout(majOrientation, 200));
 
   // Boucle de rendu.
   const horloge = new THREE.Clock();
