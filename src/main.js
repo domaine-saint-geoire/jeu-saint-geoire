@@ -1,13 +1,17 @@
 /**
  * main.js — Point d'entrée du jeu. Enchaînement :
  *
- *   chargement de la carte  →  MENU  →  mode choisi  →  partie (boucle de rendu)
+ *   chargement de la carte  →  MENU  →  (personnalisation si en ligne)  →  partie (boucle de rendu)
  *
- * Modes : « solo » (tout seul) ou « multi » (multijoueur, via le serveur).
+ * Modes :
+ *   - « solo »  : on se balade tout seul (pas de serveur nécessaire côté réseau).
+ *   - « multi » : partie en ligne — on voit les autres, on discute (chat).
+ *   - « loup »  : partie en ligne + on lance une manche de Loup touche-touche.
+ *
  * La boîte à idées est disponible dès le menu.
  *
  * Le jeu DOIT être servi par un serveur (http) — pas ouvert en fichier local —
- * car il lit les pixels de l'image de données.
+ * car il lit les pixels de l'image de données. Le multijoueur exige en plus le serveur du jeu.
  */
 import * as THREE from '../lib/three.module.js';
 import { Carte } from './carte.js';
@@ -18,6 +22,8 @@ import { Player } from './player.js';
 import { UI } from './ui.js';
 import { Menu } from './menu.js';
 import { Net } from './net.js';
+import { LoupUI } from './loup.js';
+import { Personnalisation } from './avatar.js';
 import { installerBoiteAIdees } from './ideas.js';
 import { chargerDecors } from './decors.js';
 
@@ -34,29 +40,46 @@ async function demarrer() {
 
   // État de la partie.
   let pseudo = 'Anonyme';
-  let player = null, controls = null, net = null, enJeu = false;
+  let player = null, controls = null, net = null, loupUI = null, enJeu = false;
 
   // Boîte à idées (utilise le pseudo courant).
   installerBoiteAIdees(() => pseudo);
 
-  // Menu → lance la partie dans le mode choisi.
-  const menu = new Menu((mode, p) => { if (p) pseudo = p; lancerPartie(mode); });
+  // Écran de personnalisation (réutilisé pour les modes en ligne).
+  const perso = new Personnalisation((p, skin) => lancerPartie(perso._mode, p, skin));
+
+  // Menu → solo direct, ou personnalisation avant de rejoindre en ligne.
+  const menu = new Menu((mode) => {
+    if (mode === 'solo') { lancerPartie('solo'); return; }
+    perso._mode = mode;               // mémorise le mode choisi pour l'après-validation
+    perso.afficher(pseudo === 'Anonyme' ? '' : pseudo);
+  });
   ui.chargement.style.display = 'none';
   menu.afficher();
 
-  function lancerPartie(mode) {
+  function lancerPartie(mode, p, skin) {
+    if (p) pseudo = p;
     controls = new Controls(renderer.domElement);
     player = new Player(carte, controls, (hors) => ui.horsLimites(hors));
     player.collideursDecors = empreintesDecors;   // collisions des décors
-    if (mode === 'multi') net = new Net(scene, pseudo);
+
+    if (mode === 'multi' || mode === 'loup') {
+      net = new Net(scene, pseudo, skin);
+      loupUI = new LoupUI(net, () => player.position);
+      loupUI.montrer();
+      // Mode « loup » : on tente de démarrer une manche dès qu'on est connecté.
+      if (mode === 'loup') setTimeout(() => net.demarrerLoup(), 1500);
+    }
     enJeu = true;
     ui.invite.style.display = 'flex';
     ui.invite.onclick = () => { ui.masquerInvite(); renderer.domElement.requestPointerLock(); };
   }
 
-  // Échap → la souris se déverrouille → on remontre l'invite (pause).
+  // Échap → la souris se déverrouille → on remontre l'invite (pause),
+  // sauf si on est en train d'écrire dans le chat.
   document.addEventListener('pointerlockchange', () => {
-    if (enJeu && document.pointerLockElement !== renderer.domElement) ui.invite.style.display = 'flex';
+    const ecrit = document.activeElement && document.activeElement.id === 'chatInput';
+    if (enJeu && !ecrit && document.pointerLockElement !== renderer.domElement) ui.invite.style.display = 'flex';
   });
 
   // Boucle de rendu.
@@ -66,7 +89,7 @@ async function demarrer() {
     const dt = Math.min(horloge.getDelta(), 0.1);
     if (enJeu) {
       player.maj(dt, camera);
-      if (net) net.envoyer(player.position.x, player.position.y, player.position.z, controls.yaw);
+      if (net) net.envoyer(player.position.x, player.position.y, player.position.z, controls.yaw, false);
       ui.majDebug(player.position.x, player.position.z,
         carte.altitudeAt(player.position.x, player.position.z));
     }

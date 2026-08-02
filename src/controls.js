@@ -41,6 +41,9 @@ export class Controls {
    * @returns {{avant:number, droite:number, court:boolean}}  avant/droite ∈ {−1,0,1}
    */
   intention() {
+    // Si on est en train d'écrire (chat), on ne bouge pas.
+    const a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return { avant: 0, droite: 0, court: false };
     const t = this._touches;
     const avant  = ((t.KeyW || t.ArrowUp)    ? 1 : 0) - ((t.KeyS || t.ArrowDown)  ? 1 : 0);
     const droite = ((t.KeyD || t.ArrowRight) ? 1 : 0) - ((t.KeyA || t.ArrowLeft)  ? 1 : 0);
