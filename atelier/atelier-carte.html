@@ -2,23 +2,24 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Atelier de peinture — Domaine de Saint-Geoire</title>
 <!--
   atelier-carte.html — L'ATELIER DE PEINTURE de Gaétan (V2).
 
-  But : dessiner des ZONES sur la vue satellite du domaine (pré, gravier, bois,
-  bambouseraie…) et les exporter dans un fichier « carte ». Le jeu s'en servira
-  pour habiller le sol et semer les arbres. LES TEXTURES sont choisies ENSUITE,
-  ensemble — ici on ne fait que délimiter et nommer les zones.
+  But : dessiner des ZONES sur la vue satellite (pré, gravier, bois, bambouseraie…)
+  et les exporter dans un fichier « carte ». Le jeu s'en servira pour habiller le sol
+  et semer les arbres. LES TEXTURES sont choisies ENSUITE, ensemble.
 
-  Repère (identique à l'atelier décors) : carré de 250 m, origine au CENTRE,
-  haut = nord. Les zones sont enregistrées en MÈTRES (indépendant de l'image),
-  donc si on change la résolution du satellite, les zones restent au bon endroit.
+  Repère (identique à l'atelier décors) : carré de 250 m, origine au CENTRE, haut = nord.
+  Les zones sont enregistrées en MÈTRES (indépendant de l'image).
 
-  100 % autonome : aucune dépendance externe. Se lance via le jeu
-  (http://localhost:8790/atelier/atelier-carte.html) ou en ouvrant le fichier
-  (bouton « charger une image » si le satellite ne se charge pas tout seul).
+  SAUVEGARDE PARTAGÉE : le travail est enregistré sur le SERVEUR du jeu (POST /carte →
+  V2/monde/carte.json) et rechargé au démarrage (GET ../monde/carte.json). Ainsi, on
+  retrouve son travail depuis n'importe quel appareil connecté au même serveur. En
+  secours (hors serveur), sauvegarde locale dans le navigateur (localStorage).
+
+  ZOOM : molette, pincement (2 doigts), ou boutons ＋ / － / recentrer.
 -->
 <style>
   :root{ --vert:#3a5a40; --vert2:#22301f; --or:#e5a83e; --ink:#eef3ea; --panel:#1c231d; --line:#33402f; }
@@ -26,32 +27,33 @@
   html,body{ margin:0; height:100%; background:#14180f; color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   .app{ display:flex; flex-direction:column; height:100%; }
-  header{ padding:10px 16px; background:linear-gradient(160deg,var(--vert),var(--vert2));
-    border-bottom:1px solid var(--line); }
+  header{ padding:10px 16px; background:linear-gradient(160deg,var(--vert),var(--vert2)); border-bottom:1px solid var(--line); }
   header h1{ margin:0; font-size:18px; }
   header p{ margin:3px 0 0; font-size:12.5px; color:#c7d4c2; }
 
   .main{ flex:1; display:flex; min-height:0; }
-  .toile{ flex:1; display:flex; align-items:center; justify-content:center; padding:14px; min-width:0; }
-  #cv{ background:#0c0f08; border:1px solid var(--line); border-radius:10px; max-width:100%;
-    max-height:100%; touch-action:none; cursor:crosshair; }
-  .side{ width:290px; background:var(--panel); border-left:1px solid var(--line);
-    padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+  .toile{ flex:1; display:flex; align-items:center; justify-content:center; padding:14px; min-width:0; position:relative; }
+  #cv{ background:#0c0f08; border:1px solid var(--line); border-radius:10px; max-width:100%; max-height:100%;
+    touch-action:none; cursor:crosshair; }
+  .side{ width:290px; background:var(--panel); border-left:1px solid var(--line); padding:14px;
+    overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+
+  .zoombar{ position:absolute; left:22px; bottom:22px; display:flex; gap:6px; }
+  .zoombar button{ width:40px; height:40px; font-size:18px; padding:0; background:rgba(20,26,17,.86);
+    border:1px solid var(--line); color:var(--ink); border-radius:10px; cursor:pointer; }
+  .zoombar button:hover{ border-color:var(--or); }
 
   .bloc h2{ font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#9fb098; margin:0 0 8px; }
   .row{ display:flex; gap:7px; flex-wrap:wrap; }
-  button, select{ font:inherit; font-size:13px; color:var(--ink); background:#28331f;
-    border:1px solid var(--line); border-radius:9px; padding:8px 11px; cursor:pointer; }
+  button, select{ font:inherit; font-size:13px; color:var(--ink); background:#28331f; border:1px solid var(--line);
+    border-radius:9px; padding:8px 11px; cursor:pointer; }
   button:hover{ border-color:var(--or); }
   button.on{ background:var(--or); color:#1a1205; border-color:var(--or); font-weight:700; }
   button.primary{ background:var(--or); color:#1a1205; border-color:var(--or); font-weight:700; }
-  button.danger{ border-color:#a5462f; }
-  select{ width:100%; }
   .hint{ font-size:12px; color:#a9b6a4; line-height:1.5; }
 
   .types{ display:flex; flex-direction:column; gap:5px; }
-  .type{ display:flex; align-items:center; gap:8px; padding:5px 7px; border-radius:8px; cursor:pointer;
-    border:1px solid transparent; }
+  .type{ display:flex; align-items:center; gap:8px; padding:5px 7px; border-radius:8px; cursor:pointer; border:1px solid transparent; }
   .type:hover{ background:#232d1c; }
   .type.sel{ border-color:var(--or); background:#232d1c; }
   .pastille{ width:16px; height:16px; border-radius:4px; flex:none; border:1px solid rgba(255,255,255,.3); }
@@ -59,23 +61,24 @@
   .type .cat{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#8fa088; }
   .type .cnt{ font-size:11px; color:#8fa088; }
 
-  .zlist{ display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
+  .zlist{ display:flex; flex-direction:column; gap:4px; max-height:170px; overflow-y:auto; }
   .z{ display:flex; align-items:center; gap:7px; font-size:12px; padding:4px 6px; border-radius:7px; cursor:pointer; }
   .z:hover{ background:#232d1c; } .z.sel{ background:#2c3a22; outline:1px solid var(--or); }
   .z .x{ margin-left:auto; color:#c98; padding:0 4px; }
 
-  dialog{ background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:14px;
-    padding:18px; width:320px; max-width:92vw; }
+  #etatSauve{ display:flex; align-items:center; gap:6px; font-size:12px; padding:8px 10px; border-radius:8px;
+    background:#232d1c; border:1px solid var(--line); }
+
+  dialog{ background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:14px; padding:18px; width:320px; max-width:92vw; }
   dialog::backdrop{ background:rgba(0,0,0,.55); }
   dialog h3{ margin:0 0 12px; font-size:16px; }
   dialog label{ display:block; font-size:12px; color:#9fb098; margin:10px 0 4px; }
-  dialog input[type=text]{ width:100%; background:#28331f; color:var(--ink); border:1px solid var(--line);
-    border-radius:8px; padding:9px; font:inherit; }
+  dialog input[type=text]{ width:100%; background:#28331f; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px; font:inherit; }
   .radio{ display:flex; gap:8px; margin-top:6px; }
-  .radio label{ flex:1; margin:0; display:flex; align-items:center; gap:6px; background:#28331f;
-    border:1px solid var(--line); border-radius:8px; padding:9px; cursor:pointer; color:var(--ink); font-size:13px; }
-  textarea{ width:100%; height:130px; background:#12160d; color:#cfe; border:1px solid var(--line);
-    border-radius:8px; font-family:ui-monospace,Consolas,monospace; font-size:11px; padding:8px; }
+  .radio label{ flex:1; margin:0; display:flex; align-items:center; gap:6px; background:#28331f; border:1px solid var(--line);
+    border-radius:8px; padding:9px; cursor:pointer; color:var(--ink); font-size:13px; }
+  textarea{ width:100%; height:130px; background:#12160d; color:#cfe; border:1px solid var(--line); border-radius:8px;
+    font-family:ui-monospace,Consolas,monospace; font-size:11px; padding:8px; }
   .fallback{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column;
     gap:10px; background:rgba(12,15,8,.9); text-align:center; padding:20px; }
 </style>
@@ -84,12 +87,17 @@
 <div class="app">
   <header>
     <h1>🎨 Atelier de peinture — Saint-Geoire</h1>
-    <p>Dessine tes zones sur la carte, donne-leur un nom. Les textures, on les choisit ensemble après. Ton travail est sauvegardé tout seul.</p>
+    <p>Dessine tes zones, donne-leur un nom. Zoom à la molette / au pincement. Ton travail se retrouve sur tous tes appareils.</p>
   </header>
 
   <div class="main">
-    <div class="toile" id="toile" style="position:relative">
+    <div class="toile" id="toile">
       <canvas id="cv" width="800" height="800"></canvas>
+      <div class="zoombar">
+        <button id="zMoins" title="Dézoomer">−</button>
+        <button id="zPlus" title="Zoomer">＋</button>
+        <button id="zReset" title="Voir toute la carte">⤢</button>
+      </div>
       <div class="fallback" id="fallback">
         <div>Le satellite ne s'est pas chargé.<br>Ouvre plutôt l'atelier via le jeu, ou charge l'image&nbsp;:</div>
         <input type="file" id="fileImg" accept="image/*">
@@ -104,7 +112,7 @@
           <button id="mPoints">📍 Points</button>
           <button id="mSelect">✋ Sélection</button>
         </div>
-        <p class="hint" id="aide">Pinceau&nbsp;: garde le doigt/clic appuyé et longe le contour de la zone, relâche pour terminer.</p>
+        <p class="hint" id="aide"></p>
         <div class="row">
           <button id="btnTerminer">✔ Terminer la zone</button>
           <button id="btnAnnulerPt">↶ Point</button>
@@ -115,9 +123,7 @@
       <div class="bloc">
         <h2>Type à peindre</h2>
         <div class="types" id="types"></div>
-        <div class="row" style="margin-top:8px">
-          <button id="btnNewType">➕ Nouveau type</button>
-        </div>
+        <div class="row" style="margin-top:8px"><button id="btnNewType">➕ Nouveau type</button></div>
       </div>
 
       <div class="bloc">
@@ -127,18 +133,18 @@
 
       <div class="bloc">
         <h2>Sauvegarde</h2>
-        <div class="row">
-          <button id="btnExport" class="primary">📤 Exporter pour Gaétan/Claude</button>
+        <div id="etatSauve">…</div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnExport" class="primary">📤 Exporter</button>
           <button id="btnImport">📂 Reprendre un fichier</button>
         </div>
-        <p class="hint">« Exporter » te donne le fichier <b>carte.json</b> à me renvoyer. Rien n'est envoyé automatiquement.</p>
+        <p class="hint">Enregistré tout seul. « Exporter » te donne le fichier <b>carte.json</b> à me renvoyer.</p>
         <input type="file" id="fileJson" accept="application/json,.json" style="display:none">
       </div>
     </aside>
   </div>
 </div>
 
-<!-- Dialogue : nouveau type -->
 <dialog id="dlgType">
   <h3>Nouveau type de zone</h3>
   <label>Nom (ex. « Pré », « Cour gravier », « Bois de chênes »)</label>
@@ -151,12 +157,10 @@
   <label>Couleur d'affichage (juste pour toi, pas la texture finale)</label>
   <input type="color" id="ntCol" value="#7cb342" style="width:100%;height:40px;background:none;border:1px solid var(--line);border-radius:8px">
   <div class="row" style="margin-top:16px;justify-content:flex-end">
-    <button id="ntCancel">Annuler</button>
-    <button id="ntOk" class="primary">Créer</button>
+    <button id="ntCancel">Annuler</button><button id="ntOk" class="primary">Créer</button>
   </div>
 </dialog>
 
-<!-- Dialogue : export / import -->
 <dialog id="dlgTexte">
   <h3 id="dtTitre">Exporter</h3>
   <p class="hint" id="dtHint"></p>
@@ -171,31 +175,37 @@
 
 <script>
 'use strict';
-// ————————————————— Réglages du repère (identiques au jeu) —————————————————
-const TAILLE_MONDE_M = 250;              // côté du carré du monde, en mètres
-const CLE = 'sg-atelier-carte-v2';       // sauvegarde locale
-let FRAME = 1200;                          // largeur de l'image satellite (lue au chargement)
+// ————————————————— Repère du monde (identique au jeu) —————————————————
+const TAILLE_MONDE_M = 250;
+const CLE = 'sg-atelier-carte-v2';
+let FRAME = 1200;
 
 // ————————————————— État —————————————————
 const TYPES_DEFAUT = [
-  { id:'pre',      nom:'Pré (herbe de champ)',       cat:'sol',    couleur:'#7cb342' },
-  { id:'sousbois', nom:'Herbe de sous-bois',         cat:'sol',    couleur:'#4e7a3a' },
-  { id:'gravier',  nom:'Gravier',                    cat:'sol',    couleur:'#b7ae9b' },
-  { id:'chemin',   nom:'Chemin de terre',            cat:'sol',    couleur:'#a9793f' },
-  { id:'feuillus', nom:'Bois de feuillus',           cat:'arbres', couleur:'#2e6b37' },
-  { id:'bambou',   nom:'Bambouseraie',               cat:'arbres', couleur:'#a6c34c' },
+  { id:'pre',      nom:'Pré (herbe de champ)', cat:'sol',    couleur:'#7cb342' },
+  { id:'sousbois', nom:'Herbe de sous-bois',   cat:'sol',    couleur:'#4e7a3a' },
+  { id:'gravier',  nom:'Gravier',              cat:'sol',    couleur:'#b7ae9b' },
+  { id:'chemin',   nom:'Chemin de terre',      cat:'sol',    couleur:'#a9793f' },
+  { id:'feuillus', nom:'Bois de feuillus',     cat:'arbres', couleur:'#2e6b37' },
+  { id:'bambou',   nom:'Bambouseraie',         cat:'arbres', couleur:'#a6c34c' },
 ];
 let state = { types: JSON.parse(JSON.stringify(TYPES_DEFAUT)), zones: [] };
+let maj = 0;                 // horodatage de la dernière modif (pour choisir la version la + récente)
 let typeCourant = 'pre';
-let mode = 'pinceau';           // 'pinceau' | 'points' | 'select'
-let cur = [];                    // tracé en cours (points MONDE)
-let dessine = false;            // pinceau : bouton enfoncé
-let zoneSel = null;             // id de la zone sélectionnée
+let mode = 'pinceau';        // 'pinceau' | 'points' | 'select'
+let cur = [];                // tracé en cours (points MONDE)
+let dessine = false;
+let zoneSel = null;
 let prochainId = 1;
 
-// ————————————————— Image satellite —————————————————
+// Vue (zoom/déplacement)
+let baseScale = 1;           // pixels-toile par pixel-image quand toute la carte est visible (z=1)
+const view = { z:1, panX:0, panY:0 };
+
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
+
+// ————————————————— Image satellite —————————————————
 const img = new Image();
 let imgOk = false;
 img.onload = () => { imgOk = true; FRAME = img.naturalWidth || FRAME; ajusterTaille(); redraw(); };
@@ -203,12 +213,10 @@ img.onerror = () => { document.getElementById('fallback').style.display = 'flex'
 img.src = '../carte/SatView.jpg';
 document.getElementById('fileImg').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
-  const r = new FileReader(); r.onload = () => { img.src = r.result; document.getElementById('fallback').style.display='none'; };
-  r.readAsDataURL(f);
+  const r = new FileReader(); r.onload = () => { img.src = r.result; document.getElementById('fallback').style.display='none'; }; r.readAsDataURL(f);
 });
 
-// ————————————————— Conversions mètres ↔ pixels image ↔ toile —————————————————
-let ECH = 1;  // pixels-toile par pixel-image
+// ————————————————— Taille de la toile + conversions —————————————————
 function ajusterTaille(){
   const box = document.getElementById('toile');
   const dispo = Math.max(240, Math.min(box.clientWidth - 28, box.clientHeight - 28));
@@ -216,31 +224,45 @@ function ajusterTaille(){
   cv.style.width = dispo + 'px'; cv.style.height = dispo + 'px';
   cv.width = Math.round(dispo * dpr); cv.height = Math.round(dispo * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ECH = dispo / FRAME;
+  baseScale = dispo / FRAME;
+  clampView();
 }
 window.addEventListener('resize', () => { ajusterTaille(); redraw(); });
 
-function toileVersMonde(cx, cy){                     // pixels toile → mètres monde
-  const ipx = cx / ECH, ipy = cy / ECH;
+function drawScale(){ return baseScale * view.z; }
+function toileVersMonde(cx, cy){
+  const ipx = (cx - view.panX) / drawScale(), ipy = (cy - view.panY) / drawScale();
   return [ (ipx/FRAME - 0.5) * TAILLE_MONDE_M, (ipy/FRAME - 0.5) * TAILLE_MONDE_M ];
 }
-function mondeVersToile(wx, wz){                     // mètres monde → pixels toile
+function mondeVersToile(wx, wz){
   const ipx = (wx/TAILLE_MONDE_M + 0.5) * FRAME, ipy = (wz/TAILLE_MONDE_M + 0.5) * FRAME;
-  return [ ipx * ECH, ipy * ECH ];
+  return [ ipx * drawScale() + view.panX, ipy * drawScale() + view.panY ];
 }
-function posSouris(e){
-  const r = cv.getBoundingClientRect();
-  return [ e.clientX - r.left, e.clientY - r.top ];
+function posSouris(e){ const r = cv.getBoundingClientRect(); return [ e.clientX - r.left, e.clientY - r.top ]; }
+
+function clampView(){
+  const disp = cv.clientWidth || 240, taille = FRAME * drawScale();
+  if (taille <= disp + 0.5){ view.panX = (disp - taille) / 2; view.panY = (disp - taille) / 2; }
+  else {
+    view.panX = Math.min(0, Math.max(disp - taille, view.panX));
+    view.panY = Math.min(0, Math.max(disp - taille, view.panY));
+  }
+}
+function zoomAutour(cx, cy, facteur){
+  const nz = Math.max(1, Math.min(12, view.z * facteur));
+  const ds0 = baseScale * view.z, ds1 = baseScale * nz;
+  const ipx = (cx - view.panX) / ds0, ipy = (cy - view.panY) / ds0;
+  view.panX = cx - ipx * ds1; view.panY = cy - ipy * ds1; view.z = nz;
+  clampView(); redraw();
 }
 
 // ————————————————— Dessin —————————————————
 function redraw(){
   const W = cv.clientWidth, H = cv.clientHeight;
   ctx.clearRect(0, 0, W, H);
-  if (imgOk) ctx.drawImage(img, 0, 0, W, H);
+  if (imgOk){ const s = FRAME * drawScale(); ctx.drawImage(img, view.panX, view.panY, s, s); }
   else { ctx.fillStyle = '#0c0f08'; ctx.fillRect(0,0,W,H); }
-
-  for (const z of state.zones) dessinerPolygone(z.pts, couleurType(z.type), z.id === zoneSel);
+  for (const z of state.zones) dessinerPolygone(z.pts, couleurType(z.type), z.id === zoneSel, false);
   if (cur.length) dessinerPolygone(cur, couleurType(typeCourant), true, true);
 }
 function dessinerPolygone(ptsMonde, couleur, actif, ouvert){
@@ -256,37 +278,73 @@ function dessinerPolygone(ptsMonde, couleur, actif, ouvert){
 function couleurType(id){ const t = state.types.find(t => t.id === id); return t ? t.couleur : '#ffffff'; }
 function hexA(hex, a){ const n = parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
 
-// ————————————————— Interactions souris/tactile —————————————————
+// ————————————————— Souris / tactile (dessin + zoom + déplacement) —————————————————
+const pointers = new Map();  // pointerId -> [cx,cy]
+let pinchPrec = null;        // {dist, mid:[x,y]}
+let panning = false, panDep = null;
+let espace = false;
+
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
 cv.addEventListener('pointerdown', (e) => {
   if (!imgOk) return;
-  const [cx, cy] = posSouris(e);
+  const [cx, cy] = posSouris(e); pointers.set(e.pointerId, [cx, cy]);
+  if (pointers.size === 2){ cur = []; dessine = false; pinchPrec = null; redraw(); return; } // pincement
+  if (pointers.size > 2) return;
+  if (espace || e.button === 1 || e.button === 2){ panning = true; panDep = [cx, cy, view.panX, view.panY]; cv.setPointerCapture(e.pointerId); return; }
   if (mode === 'select'){ selectionnerZoneAu(cx, cy); return; }
   const p = toileVersMonde(cx, cy);
   if (mode === 'pinceau'){ cur = [p]; dessine = true; cv.setPointerCapture(e.pointerId); }
   else if (mode === 'points'){ cur.push(p); redraw(); }
 });
 cv.addEventListener('pointermove', (e) => {
-  if (!dessine || mode !== 'pinceau') return;
-  const [cx, cy] = posSouris(e);
-  const p = toileVersMonde(cx, cy);
-  const [lx, ly] = cur.length ? mondeVersToile(cur[cur.length-1][0], cur[cur.length-1][1]) : [0,0];
-  if (Math.hypot(cx - lx, cy - ly) > 6){ cur.push(p); redraw(); }   // 1 point tous les ~6 px
+  if (!pointers.has(e.pointerId)) { return; }
+  const [cx, cy] = posSouris(e); pointers.set(e.pointerId, [cx, cy]);
+  if (pointers.size === 2){ pincer(); return; }
+  if (panning){ view.panX = panDep[2] + (cx - panDep[0]); view.panY = panDep[3] + (cy - panDep[1]); clampView(); redraw(); return; }
+  if (dessine && mode === 'pinceau'){
+    const [lx, ly] = cur.length ? mondeVersToile(cur[cur.length-1][0], cur[cur.length-1][1]) : [1e9,1e9];
+    if (Math.hypot(cx - lx, cy - ly) > 6){ cur.push(toileVersMonde(cx, cy)); redraw(); }
+  }
 });
-cv.addEventListener('pointerup', () => {
-  if (mode === 'pinceau' && dessine){ dessine = false; terminerZone(); }
-});
-cv.addEventListener('dblclick', () => { if (mode === 'points') terminerZone(); });
+function finPointeur(e){
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchPrec = null;
+  if (panning && pointers.size === 0) panning = false;
+  if (mode === 'pinceau' && dessine && pointers.size === 0){ dessine = false; terminerZone(); }
+}
+cv.addEventListener('pointerup', finPointeur);
+cv.addEventListener('pointercancel', finPointeur);
+
+function pincer(){
+  const pts = [...pointers.values()];
+  const dist = Math.hypot(pts[0][0]-pts[1][0], pts[0][1]-pts[1][1]);
+  const mid = [ (pts[0][0]+pts[1][0])/2, (pts[0][1]+pts[1][1])/2 ];
+  if (pinchPrec){
+    if (pinchPrec.dist > 0) zoomAutour(mid[0], mid[1], dist / pinchPrec.dist);
+    view.panX += mid[0] - pinchPrec.mid[0]; view.panY += mid[1] - pinchPrec.mid[1]; clampView(); redraw();
+  }
+  pinchPrec = { dist, mid };
+}
+cv.addEventListener('wheel', (e) => { if (!imgOk) return; e.preventDefault(); const [cx,cy]=posSouris(e); zoomAutour(cx, cy, e.deltaY < 0 ? 1.15 : 1/1.15); }, { passive:false });
+
+document.getElementById('zPlus').onclick  = () => zoomAutour(cv.clientWidth/2, cv.clientWidth/2, 1.3);
+document.getElementById('zMoins').onclick = () => zoomAutour(cv.clientWidth/2, cv.clientWidth/2, 1/1.3);
+document.getElementById('zReset').onclick = () => { view.z = 1; clampView(); redraw(); };
+
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'Enter') terminerZone();
+  if (e.code === 'Space'){ espace = true; e.preventDefault(); }
+  else if (e.key === 'Enter') terminerZone();
   else if (e.key === 'Escape'){ cur = []; redraw(); }
   else if (e.key === 'Backspace'){ cur.pop(); redraw(); }
 });
+window.addEventListener('keyup', (e) => { if (e.code === 'Space') espace = false; });
 
+// ————————————————— Zones —————————————————
 function terminerZone(){
-  if (cur.length < 3){ if (cur.length) { alert('Il faut au moins 3 points pour former une zone.'); } return; }
+  if (cur.length < 3){ if (cur.length) alert('Il faut au moins 3 points pour former une zone.'); return; }
   state.zones.push({ id: prochainId++, type: typeCourant, pts: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
-  cur = []; sauver(); majZones(); redraw();
+  cur = []; enregistrer(); majZones(); majTypes(); redraw();
 }
 function selectionnerZoneAu(cx, cy){
   const [wx, wz] = toileVersMonde(cx, cy);
@@ -294,24 +352,23 @@ function selectionnerZoneAu(cx, cy){
   zoneSel = null; majZones(); redraw();
 }
 function dansPolygone(x, y, pts){
-  let dedans = false;
+  let d = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){
-    const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
-    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) dedans = !dedans;
+    const xi=pts[i][0], yi=pts[i][1], xj=pts[j][0], yj=pts[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) d = !d;
   }
-  return dedans;
+  return d;
 }
 
-// ————————————————— Panneaux (types + zones) —————————————————
+// ————————————————— Panneaux —————————————————
 function majTypes(){
   const c = document.getElementById('types'); c.innerHTML = '';
   for (const t of state.types){
     const n = state.zones.filter(z => z.type === t.id).length;
     const el = document.createElement('div');
     el.className = 'type' + (t.id === typeCourant ? ' sel' : '');
-    el.innerHTML = `<span class="pastille" style="background:${t.couleur}"></span>`
-      + `<span class="nom">${echap(t.nom)}</span><span class="cat">${t.cat==='arbres'?'arbres':'sol'}</span>`
-      + `<span class="cnt">${n}</span>`;
+    el.innerHTML = `<span class="pastille" style="background:${t.couleur}"></span><span class="nom">${echap(t.nom)}</span>`
+      + `<span class="cat">${t.cat==='arbres'?'arbres':'sol'}</span><span class="cnt">${n}</span>`;
     el.onclick = () => { typeCourant = t.id; majTypes(); };
     c.appendChild(el);
   }
@@ -323,10 +380,9 @@ function majZones(){
     const t = state.types.find(t => t.id === z.type);
     const el = document.createElement('div');
     el.className = 'z' + (z.id === zoneSel ? ' sel' : '');
-    el.innerHTML = `<span class="pastille" style="background:${t?t.couleur:'#fff'}"></span>`
-      + `<span>${t?echap(t.nom):'?'} · ${z.pts.length} pts</span><span class="x">✖</span>`;
+    el.innerHTML = `<span class="pastille" style="background:${t?t.couleur:'#fff'}"></span><span>${t?echap(t.nom):'?'} · ${z.pts.length} pts</span><span class="x">✖</span>`;
     el.onclick = (ev) => {
-      if (ev.target.classList.contains('x')){ state.zones = state.zones.filter(x => x.id !== z.id); sauver(); majZones(); majTypes(); redraw(); }
+      if (ev.target.classList.contains('x')){ state.zones = state.zones.filter(x => x.id !== z.id); enregistrer(); majZones(); majTypes(); redraw(); }
       else { zoneSel = z.id; majZones(); redraw(); }
     };
     c.appendChild(el);
@@ -341,9 +397,9 @@ function setMode(m){
   document.getElementById('mPoints').classList.toggle('on', m==='points');
   document.getElementById('mSelect').classList.toggle('on', m==='select');
   document.getElementById('aide').textContent = m==='pinceau'
-    ? "Pinceau : garde le doigt/clic appuyé et longe le contour de la zone, relâche pour terminer."
-    : m==='points' ? "Points : clique pour poser chaque coin, puis « Terminer » (ou double-clic / Entrée)."
-    : "Sélection : clique une zone pour la choisir, puis « ✖ » dans la liste pour la retirer.";
+    ? "Pinceau : garde appuyé et longe le contour, relâche pour terminer. (Molette = zoom, Espace+glisser = déplacer)"
+    : m==='points' ? "Points : clique chaque coin, puis « Terminer » (double-clic / Entrée)."
+    : "Sélection : clique une zone, puis « ✖ » dans la liste pour la retirer.";
   cv.style.cursor = m==='select' ? 'pointer' : 'crosshair';
   redraw();
 }
@@ -353,6 +409,7 @@ document.getElementById('mSelect').onclick  = () => setMode('select');
 document.getElementById('btnTerminer').onclick = terminerZone;
 document.getElementById('btnAnnulerPt').onclick = () => { cur.pop(); redraw(); };
 document.getElementById('btnCancel').onclick = () => { cur = []; redraw(); };
+cv.addEventListener('dblclick', () => { if (mode === 'points') terminerZone(); });
 
 // Nouveau type
 const dlgType = document.getElementById('dlgType');
@@ -364,7 +421,7 @@ document.getElementById('ntOk').onclick = () => {
   const couleur = document.getElementById('ntCol').value;
   const id = 't' + Date.now().toString(36);
   state.types.push({ id, nom, cat, couleur }); typeCourant = id;
-  dlgType.close(); sauver(); majTypes();
+  dlgType.close(); enregistrer(); majTypes();
 };
 
 // Export / import
@@ -378,11 +435,10 @@ document.getElementById('btnExport').onclick = () => {
 };
 document.getElementById('btnImport').onclick = () => {
   document.getElementById('dtTitre').textContent = 'Reprendre un fichier';
-  document.getElementById('dtHint').textContent = 'Colle ici le contenu d\'un carte.json, ou choisis le fichier, puis « Charger ».';
+  document.getElementById('dtHint').textContent = 'Colle le contenu d\'un carte.json, ou choisis le fichier, puis « Charger ».';
   document.getElementById('dtZone').value = '';
   document.getElementById('dtTelecharger').style.display = 'none'; document.getElementById('dtCharger').style.display = '';
-  dlgTexte.showModal();
-  document.getElementById('fileJson').click();
+  dlgTexte.showModal(); document.getElementById('fileJson').click();
 };
 document.getElementById('fileJson').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -396,30 +452,58 @@ document.getElementById('dtTelecharger').onclick = () => {
 document.getElementById('dtCharger').onclick = () => {
   try {
     const o = JSON.parse(document.getElementById('dtZone').value);
-    if (o.types && o.zones){ state = { types:o.types, zones:o.zones }; prochainId = Math.max(0,...state.zones.map(z=>z.id||0))+1; sauver(); majTypes(); majZones(); redraw(); dlgTexte.close(); }
+    if (o.types && o.zones){ appliquer(o); enregistrer(); majTypes(); majZones(); redraw(); dlgTexte.close(); }
     else alert('Fichier non reconnu.');
   } catch(err){ alert('Texte illisible : ' + err.message); }
 };
 document.getElementById('dtFermer').onclick = () => dlgTexte.close();
 
-function exportObj(){
-  return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, types: state.types, zones: state.zones };
-}
+function exportObj(){ return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, maj, types: state.types, zones: state.zones }; }
+function appliquer(o){ state = { types:o.types, zones:o.zones }; maj = o.maj || Date.now(); prochainId = Math.max(0,...state.zones.map(z=>z.id||0)) + 1; }
 
-// ————————————————— Sauvegarde locale —————————————————
-function sauver(){ try { localStorage.setItem(CLE, JSON.stringify({ types:state.types, zones:state.zones, prochainId })); } catch(e){} }
-function charger(){
+// ————————————————— Sauvegarde (serveur + navigateur) —————————————————
+let tSauve = null;
+function enregistrer(){ clearTimeout(tSauve); tSauve = setTimeout(sauverPartout, 700); }
+async function sauverPartout(){
+  maj = Date.now();
+  const paquet = exportObj();
+  try { localStorage.setItem(CLE, JSON.stringify({ ...paquet, prochainId })); } catch(e){}
+  try {
+    const r = await fetch('../carte', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(paquet) });
+    majEtat(r.ok);
+  } catch(e){ majEtat(false); }
+}
+function majEtat(serveur){
+  document.getElementById('etatSauve').innerHTML = serveur
+    ? '☁️ Enregistré sur le serveur — visible sur tous tes appareils'
+    : '📱 Enregistré sur cet appareil (lance le jeu pour partager entre appareils)';
+}
+function chargerLocal(){
   try { const s = JSON.parse(localStorage.getItem(CLE) || 'null');
-    if (s && s.types && s.zones){ state = { types:s.types, zones:s.zones }; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0))+1); }
+    if (s && s.types && s.zones){ state = { types:s.types, zones:s.zones }; maj = s.maj || 0; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0))+1); }
   } catch(e){}
+}
+async function chargerServeur(){
+  try {
+    const r = await fetch('../monde/carte.json?_=' + Date.now(), { cache:'no-store' });
+    if (!r.ok) return false;
+    const h = await r.json();
+    if (h && Array.isArray(h.zones) && Array.isArray(h.types) && (h.maj || 0) >= (maj || 0)){ appliquer(h); return true; }
+  } catch(e){}
+  return false;
 }
 
 // ————————————————— Démarrage —————————————————
-charger(); ajusterTaille(); majTypes(); majZones(); redraw();
+async function init(){
+  chargerLocal();
+  const duServeur = await chargerServeur();       // le + récent (serveur ou local) gagne
+  majEtat(duServeur);
+  ajusterTaille(); setMode('pinceau'); majTypes(); majZones(); redraw();
+}
+init();
 
-// Accès test/console
 window.__atelier = {
-  get state(){ return state; },
+  get state(){ return state; }, get view(){ return view; },
   ajouterZoneMonde(typeId, ptsMonde){ typeCourant = typeId; cur = ptsMonde.slice(); terminerZone(); },
   export(){ return exportObj(); }
 };
