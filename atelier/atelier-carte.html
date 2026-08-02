@@ -27,8 +27,12 @@
   html,body{ margin:0; height:100%; background:#14180f; color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   .app{ display:flex; flex-direction:column; height:100%; }
-  header{ padding:10px 16px; background:linear-gradient(160deg,var(--vert),var(--vert2)); border-bottom:1px solid var(--line); }
+  header{ padding:10px 16px; background:linear-gradient(160deg,var(--vert),var(--vert2)); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; }
   header h1{ margin:0; font-size:18px; }
+  .fs{ flex:none; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.4); color:#fff;
+    border-radius:9px; padding:9px 13px; font:inherit; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .fs:hover{ border-color:var(--or); }
   header p{ margin:3px 0 0; font-size:12.5px; color:#c7d4c2; }
 
   .main{ flex:1; display:flex; min-height:0; }
@@ -86,8 +90,11 @@
 <body>
 <div class="app">
   <header>
-    <h1>🎨 Atelier de peinture — Saint-Geoire</h1>
-    <p>Dessine tes zones, donne-leur un nom. Zoom à la molette / au pincement. Ton travail se retrouve sur tous tes appareils.</p>
+    <div class="htitre">
+      <h1>🎨 Atelier de peinture — Saint-Geoire</h1>
+      <p>Dessine tes zones, donne-leur un nom. Zoom à la molette / au pincement. Ton travail se retrouve sur tous tes appareils.</p>
+    </div>
+    <button id="btnFull" class="fs">⛶ Plein écran</button>
   </header>
 
   <div class="main">
@@ -110,6 +117,7 @@
         <div class="row">
           <button id="mPinceau" class="on">✏️ Pinceau</button>
           <button id="mPoints">📍 Points</button>
+          <button id="mNav">🤚 Déplacer</button>
           <button id="mSelect">✋ Sélection</button>
         </div>
         <p class="hint" id="aide"></p>
@@ -263,7 +271,15 @@ function redraw(){
   if (imgOk){ const s = FRAME * drawScale(); ctx.drawImage(img, view.panX, view.panY, s, s); }
   else { ctx.fillStyle = '#0c0f08'; ctx.fillRect(0,0,W,H); }
   for (const z of state.zones) dessinerPolygone(z.pts, couleurType(z.type), z.id === zoneSel, false);
-  if (cur.length) dessinerPolygone(cur, couleurType(typeCourant), true, true);
+  if (cur.length){
+    dessinerPolygone(cur, couleurType(typeCourant), true, true);
+    if (mode === 'points' && apercuPt){                    // ligne pointillée qui suit la souris
+      const [x1,y1] = mondeVersToile(cur[cur.length-1][0], cur[cur.length-1][1]);
+      const [x2,y2] = mondeVersToile(apercuPt[0], apercuPt[1]);
+      ctx.save(); ctx.setLineDash([5,5]); ctx.lineWidth = 1.5; ctx.strokeStyle = couleurType(typeCourant);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+    }
+  }
 }
 function dessinerPolygone(ptsMonde, couleur, actif, ouvert){
   if (!ptsMonde.length) return;
@@ -283,6 +299,7 @@ const pointers = new Map();  // pointerId -> [cx,cy]
 let pinchPrec = null;        // {dist, mid:[x,y]}
 let panning = false, panDep = null;
 let espace = false;
+let apercuPt = null;         // aperçu du prochain segment (mode Points)
 
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
 cv.addEventListener('pointerdown', (e) => {
@@ -290,15 +307,19 @@ cv.addEventListener('pointerdown', (e) => {
   const [cx, cy] = posSouris(e); pointers.set(e.pointerId, [cx, cy]);
   if (pointers.size === 2){ cur = []; dessine = false; pinchPrec = null; redraw(); return; } // pincement
   if (pointers.size > 2) return;
-  if (espace || e.button === 1 || e.button === 2){ panning = true; panDep = [cx, cy, view.panX, view.panY]; cv.setPointerCapture(e.pointerId); return; }
+  if (mode === 'nav' || espace || e.button === 1 || e.button === 2){ panning = true; panDep = [cx, cy, view.panX, view.panY]; cv.style.cursor = 'grabbing'; cv.setPointerCapture(e.pointerId); return; }
   if (mode === 'select'){ selectionnerZoneAu(cx, cy); return; }
   const p = toileVersMonde(cx, cy);
   if (mode === 'pinceau'){ cur = [p]; dessine = true; cv.setPointerCapture(e.pointerId); }
   else if (mode === 'points'){ cur.push(p); redraw(); }
 });
 cv.addEventListener('pointermove', (e) => {
-  if (!pointers.has(e.pointerId)) { return; }
-  const [cx, cy] = posSouris(e); pointers.set(e.pointerId, [cx, cy]);
+  const [cx, cy] = posSouris(e);
+  if (!pointers.has(e.pointerId)) {                       // souris qui survole (pas de bouton) : aperçu Points
+    if (mode === 'points' && cur.length){ apercuPt = toileVersMonde(cx, cy); redraw(); }
+    return;
+  }
+  pointers.set(e.pointerId, [cx, cy]);
   if (pointers.size === 2){ pincer(); return; }
   if (panning){ view.panX = panDep[2] + (cx - panDep[0]); view.panY = panDep[3] + (cy - panDep[1]); clampView(); redraw(); return; }
   if (dessine && mode === 'pinceau'){
@@ -309,7 +330,7 @@ cv.addEventListener('pointermove', (e) => {
 function finPointeur(e){
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchPrec = null;
-  if (panning && pointers.size === 0) panning = false;
+  if (panning && pointers.size === 0){ panning = false; if (mode === 'nav') cv.style.cursor = 'grab'; }
   if (mode === 'pinceau' && dessine && pointers.size === 0){ dessine = false; terminerZone(); }
 }
 cv.addEventListener('pointerup', finPointeur);
@@ -335,7 +356,7 @@ window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.code === 'Space'){ espace = true; e.preventDefault(); }
   else if (e.key === 'Enter') terminerZone();
-  else if (e.key === 'Escape'){ cur = []; redraw(); }
+  else if (e.key === 'Escape'){ cur = []; apercuPt = null; redraw(); }
   else if (e.key === 'Backspace'){ cur.pop(); redraw(); }
 });
 window.addEventListener('keyup', (e) => { if (e.code === 'Space') espace = false; });
@@ -344,7 +365,7 @@ window.addEventListener('keyup', (e) => { if (e.code === 'Space') espace = false
 function terminerZone(){
   if (cur.length < 3){ if (cur.length) alert('Il faut au moins 3 points pour former une zone.'); return; }
   state.zones.push({ id: prochainId++, type: typeCourant, pts: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
-  cur = []; enregistrer(); majZones(); majTypes(); redraw();
+  cur = []; apercuPt = null; enregistrer(); majZones(); majTypes(); redraw();
 }
 function selectionnerZoneAu(cx, cy){
   const [wx, wz] = toileVersMonde(cx, cy);
@@ -392,23 +413,39 @@ function echap(s){ const d = document.createElement('div'); d.textContent = s; r
 
 // ————————————————— Barre d'outils —————————————————
 function setMode(m){
-  mode = m; cur = []; dessine = false;
+  mode = m; cur = []; dessine = false; apercuPt = null;
   document.getElementById('mPinceau').classList.toggle('on', m==='pinceau');
   document.getElementById('mPoints').classList.toggle('on', m==='points');
+  document.getElementById('mNav').classList.toggle('on', m==='nav');
   document.getElementById('mSelect').classList.toggle('on', m==='select');
-  document.getElementById('aide').textContent = m==='pinceau'
-    ? "Pinceau : garde appuyé et longe le contour, relâche pour terminer. (Molette = zoom, Espace+glisser = déplacer)"
-    : m==='points' ? "Points : clique chaque coin, puis « Terminer » (double-clic / Entrée)."
-    : "Sélection : clique une zone, puis « ✖ » dans la liste pour la retirer.";
-  cv.style.cursor = m==='select' ? 'pointer' : 'crosshair';
+  const aides = {
+    pinceau: "Pinceau : garde appuyé et longe le contour, relâche pour terminer. (Molette = zoom)",
+    points: "Points : clique chaque coin ; la ligne suit ta souris. Double-clic (ou « Terminer ») pour fermer.",
+    nav: "Déplacer : clique-glisse pour te promener sur la carte. Molette / pincement pour zoomer.",
+    select: "Sélection : clique une zone, puis « ✖ » dans la liste pour la retirer."
+  };
+  document.getElementById('aide').textContent = aides[m] || '';
+  cv.style.cursor = m==='nav' ? 'grab' : m==='select' ? 'pointer' : 'crosshair';
   redraw();
 }
 document.getElementById('mPinceau').onclick = () => setMode('pinceau');
 document.getElementById('mPoints').onclick  = () => setMode('points');
+document.getElementById('mNav').onclick     = () => setMode('nav');
 document.getElementById('mSelect').onclick  = () => setMode('select');
+
+// Plein écran
+const btnFull = document.getElementById('btnFull');
+btnFull.onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+};
+document.addEventListener('fullscreenchange', () => {
+  btnFull.textContent = document.fullscreenElement ? '⛶ Quitter le plein écran' : '⛶ Plein écran';
+  setTimeout(() => { ajusterTaille(); redraw(); }, 120);
+});
 document.getElementById('btnTerminer').onclick = terminerZone;
 document.getElementById('btnAnnulerPt').onclick = () => { cur.pop(); redraw(); };
-document.getElementById('btnCancel').onclick = () => { cur = []; redraw(); };
+document.getElementById('btnCancel').onclick = () => { cur = []; apercuPt = null; redraw(); };
 cv.addEventListener('dblclick', () => { if (mode === 'points') terminerZone(); });
 
 // Nouveau type
@@ -503,7 +540,7 @@ async function init(){
 init();
 
 window.__atelier = {
-  get state(){ return state; }, get view(){ return view; },
+  get state(){ return state; }, get view(){ return view; }, get apercu(){ return apercuPt; }, get cur(){ return cur; },
   ajouterZoneMonde(typeId, ptsMonde){ typeCourant = typeId; cur = ptsMonde.slice(); terminerZone(); },
   export(){ return exportObj(); }
 };
