@@ -27,20 +27,29 @@ import { Personnalisation } from './avatar.js';
 import { installerBoiteAIdees } from './ideas.js';
 import { chargerDecors } from './decors.js';
 import { chargerMurs } from './murs.js';
+import { texturerSol } from './textures.js';
 
 async function demarrer() {
   const ui = new UI();
   const { scene, camera, renderer } = creerRendu(document.getElementById('jeu'));
 
-  // Carte (2 images) + terrain.
+  // Carte (2 images) + terrain habillé (satellite + zones peintes : herbe, gravier…).
   const carte = await Carte.charger();
-  scene.add(construireTerrain(carte));
+  const textureSol = await texturerSol(carte);
+  scene.add(construireTerrain(carte, textureSol));
 
   // Décors créés dans l'atelier (objets + collisions). Vide si pas de fichier decors.json.
   const empreintesDecors = await chargerDecors(scene, carte);
   // Murs tracés dans l'atelier de peinture (répétition d'un module le long du tracé).
   const empreintesMurs = await chargerMurs(scene, carte);
   const empreintes = empreintesDecors.concat(empreintesMurs);
+
+  // Culling de distance : les OBJETS (décors, murs, futurs arbres) au-delà d'une
+  // certaine distance devant le joueur sont masqués — le SOL (satellite + relief)
+  // reste, lui, toujours visible au loin (fond de carte représentatif).
+  const DIST_VUE2 = 150 * 150;   // mètres²
+  const cullables = [];
+  scene.traverse((o) => { if (o.userData && o.userData.cull) cullables.push(o); });
 
   // État de la partie.
   let pseudo = 'Anonyme';
@@ -116,6 +125,8 @@ async function demarrer() {
     const dt = Math.min(horloge.getDelta(), 0.1);
     if (enJeu) {
       player.maj(dt, camera);
+      const px = player.position.x, pz = player.position.z;
+      for (const o of cullables) { const dx = o.position.x - px, dz = o.position.z - pz; o.visible = (dx * dx + dz * dz) < DIST_VUE2; }
       if (net) net.envoyer(player.position.x, player.position.y, player.position.z, controls.yaw, false);
       ui.majDebug(player.position.x, player.position.z,
         carte.altitudeAt(player.position.x, player.position.z));

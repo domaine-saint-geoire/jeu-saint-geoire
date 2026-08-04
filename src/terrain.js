@@ -11,9 +11,11 @@ import { MONDE } from './config.js';
 
 /**
  * @param {import('./carte.js').Carte} carte
+ * @param {THREE.Texture} [textureSol]  texture du sol déjà préparée (satellite + zones peintes) ;
+ *   si absente, on drape simplement le satellite.
  * @returns {THREE.Mesh} le sol, prêt à être ajouté à la scène
  */
-export function construireTerrain(carte) {
+export function construireTerrain(carte, textureSol) {
   const taille = carte.tailleM;
   const seg = MONDE.SUBDIVISIONS;
 
@@ -35,13 +37,16 @@ export function construireTerrain(carte) {
   uv.needsUpdate = true;
   geo.computeVertexNormals(); // normales correctes → éclairage des pentes réaliste
 
-  // Texture satellite. flipY=false pour que la 1re ligne de l'image (le nord)
-  // corresponde à v=0, comme dans altitudeAt.
-  const texture = new THREE.Texture(carte.satellite);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.flipY = false;
-  texture.anisotropy = 4;
-  texture.needsUpdate = true;
+  // Texture du sol : soit celle préparée (satellite + zones peintes), soit le satellite seul.
+  // flipY=false pour que la 1re ligne de l'image (le nord) corresponde à v=0, comme dans altitudeAt.
+  let texture = textureSol;
+  if (!texture) {
+    texture = new THREE.Texture(carte.satellite);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.flipY = false;
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+  }
 
   const materiau = new THREE.MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 });
   const mesh = new THREE.Mesh(geo, materiau);

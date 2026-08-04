@@ -72,6 +72,7 @@ export async function chargerDecors(scene, carte) {
     const y = carte.altitudeAt(x, z) + (d.yOffset || 0);
     const s = d.scale || 1;
     poser(objet, x, y, z, s, d.rotDeg, d.tiltDeg);
+    objet.userData.cull = true;              // masqué quand loin du joueur
     scene.add(objet);
     objet.updateMatrixWorld(true);
 

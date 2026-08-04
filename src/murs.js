@@ -79,6 +79,7 @@ export async function chargerMurs(scene, carte) {
         inst.rotation.order = 'YXZ';
         inst.rotation.y = yaw;
         inst.scale.set(pas / longueur, 1, 1);          // pas de trou entre modules
+        inst.userData.cull = true;                     // masqué quand loin du joueur
         scene.add(inst);
         inst.updateMatrixWorld(true);
         empreintes.push(empreinteDe(inst));
