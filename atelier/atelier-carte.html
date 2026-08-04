@@ -143,14 +143,16 @@
       </div>
 
       <div class="bloc">
-        <h2>Murs 🧱 (<span id="murCount">0</span>)</h2>
-        <div id="murEtat" class="hint">Colle d'abord le module de mur (.glb) de Thomas.</div>
+        <h2>Murs 🧱</h2>
+        <div id="murEtat" class="hint">Ajoute un ou plusieurs modules de mur (.glb) et nomme-les (ex : « mur du pré est »).</div>
+        <div class="types" id="murTypes" style="margin-top:6px"></div>
         <div class="row" style="margin-top:8px">
-          <button id="btnMurGlb">📎 Coller le mur (.glb)</button>
-          <button id="mMur">🧱 Tracer un mur</button>
+          <button id="btnMurGlb">➕ Ajouter un mur (.glb)</button>
+          <button id="mMur">🧱 Tracer</button>
         </div>
         <input type="file" id="murFichier" accept=".glb,model/gltf-binary" style="display:none">
-        <div class="zlist" id="murList" style="margin-top:8px"></div>
+        <div style="margin-top:8px;font-size:12px;color:#9fb098">Tracés dessinés (<span id="murCount">0</span>) :</div>
+        <div class="zlist" id="murList"></div>
       </div>
 
       <div class="bloc">
@@ -211,7 +213,7 @@ const TYPES_DEFAUT = [
   { id:'feuillus', nom:'Bois de feuillus',     cat:'arbres', couleur:'#2e6b37' },
   { id:'bambou',   nom:'Bambouseraie',         cat:'arbres', couleur:'#a6c34c' },
 ];
-let state = { types: JSON.parse(JSON.stringify(TYPES_DEFAUT)), zones: [], murs: [], murModule: null };
+let state = { types: JSON.parse(JSON.stringify(TYPES_DEFAUT)), zones: [], murs: [], murTypes: [], murCourant: null };
 let maj = 0;                 // horodatage de la dernière modif (pour choisir la version la + récente)
 let typeCourant = 'pre';
 let mode = 'pinceau';        // 'pinceau' | 'points' | 'nav' | 'select' | 'mur'
@@ -395,10 +397,10 @@ function terminerZone(){
   cur = []; apercuPt = null; enregistrer(); majZones(); majTypes(); redraw();
 }
 function terminerMur(){
-  if (!state.murModule){ alert('Colle d\'abord le module de mur (.glb) de Thomas (bouton « Coller le mur »).'); return; }
+  if (!state.murCourant){ alert('Ajoute d\'abord un mur (.glb) et sélectionne-le (bouton « ➕ Ajouter un mur »).'); return; }
   if (cur.length < 2){ if (cur.length) alert('Un mur : clique au moins 2 points.'); return; }
-  state.murs.push({ id: prochainId++, points: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
-  cur = []; apercuPt = null; enregistrer(); majMurs(); redraw();
+  state.murs.push({ id: prochainId++, typeMur: state.murCourant, points: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
+  cur = []; apercuPt = null; enregistrer(); majMurTypes(); majMurs(); redraw();
 }
 function terminer(){ if (mode === 'mur') terminerMur(); else terminerZone(); }
 function selectionnerZoneAu(cx, cy){
@@ -470,32 +472,58 @@ document.getElementById('mNav').onclick     = () => setMode('nav');
 document.getElementById('mSelect').onclick  = () => setMode('select');
 document.getElementById('mMur').onclick     = () => setMode('mur');
 
-// Coller le module de mur (.glb) → stocké en base64 (le jeu le répétera le long du tracé).
+// Ajouter un module de mur (.glb) NOMMÉ → un « type de mur » (on peut en avoir plusieurs).
 document.getElementById('btnMurGlb').onclick = () => document.getElementById('murFichier').click();
 document.getElementById('murFichier').addEventListener('change', (e) => {
-  const f = e.target.files[0]; if (!f) return;
+  const f = e.target.files[0]; if (!f) { return; }
+  const nom = (prompt('Nom de ce mur (ex : « mur du pré est ») :', f.name.replace(/\.glb$/i, '')) || '').trim();
+  if (!nom) { e.target.value = ''; return; }
   const r = new FileReader();
   r.onload = () => {
     const u8 = new Uint8Array(r.result); let s = '';
     for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
-    state.murModule = btoa(s);
-    majMurEtat(); enregistrer();
-    if (mode !== 'mur') setMode('mur');
+    const id = 'w' + Date.now().toString(36);
+    state.murTypes.push({ id, nom, module: btoa(s) });
+    state.murCourant = id;
+    majMurTypes(); majMurEtat(); enregistrer();
   };
   r.readAsArrayBuffer(f);
+  e.target.value = '';
 });
+function murTypeCourant(){ return state.murTypes.find(t => t.id === state.murCourant) || null; }
 function majMurEtat(){
-  document.getElementById('murEtat').innerHTML = state.murModule
-    ? '✅ Module de mur chargé — clique « Tracer un mur » et dessine ton tracé.'
-    : 'Colle d\'abord le module de mur (.glb) de Thomas.';
+  const t = murTypeCourant();
+  document.getElementById('murEtat').innerHTML = state.murTypes.length
+    ? (t ? '✅ Mur choisi : <b>' + echap(t.nom) + '</b> — clique « Tracer » et dessine.' : 'Choisis un mur ci-dessus, puis « Tracer ».')
+    : 'Ajoute un ou plusieurs modules de mur (.glb) et nomme-les (ex : « mur du pré est »).';
+}
+function majMurTypes(){
+  const c = document.getElementById('murTypes'); c.innerHTML = '';
+  state.murTypes.forEach((t) => {
+    const nUse = state.murs.filter(m => m.typeMur === t.id).length;
+    const el = document.createElement('div');
+    el.className = 'type' + (t.id === state.murCourant ? ' sel' : '');
+    el.innerHTML = '<span class="pastille" style="background:#8a5a2b"></span><span class="nom">' + echap(t.nom) + '</span>'
+      + '<span class="cnt">' + nUse + '</span><span class="x" style="margin-left:6px;color:#c98;cursor:pointer" title="Supprimer">✖</span>';
+    el.onclick = (ev) => {
+      if (ev.target.classList.contains('x')) {
+        state.murTypes = state.murTypes.filter(x => x !== t);
+        state.murs = state.murs.filter(m => m.typeMur !== t.id);
+        if (state.murCourant === t.id) state.murCourant = state.murTypes[0] ? state.murTypes[0].id : null;
+        enregistrer(); majMurTypes(); majMurs(); majMurEtat(); redraw();
+      } else { state.murCourant = t.id; majMurTypes(); majMurEtat(); }
+    };
+    c.appendChild(el);
+  });
 }
 function majMurs(){
   document.getElementById('murCount').textContent = state.murs.length;
   const c = document.getElementById('murList'); c.innerHTML = '';
   state.murs.forEach((m) => {
+    const t = state.murTypes.find(x => x.id === m.typeMur);
     const el = document.createElement('div'); el.className = 'z';
-    el.innerHTML = '<span class="pastille" style="background:#8a5a2b"></span><span>Mur · ' + m.points.length + ' points</span><span class="x">✖</span>';
-    el.onclick = (ev) => { if (ev.target.classList.contains('x')){ state.murs = state.murs.filter(x => x !== m); enregistrer(); majMurs(); redraw(); } };
+    el.innerHTML = '<span class="pastille" style="background:#8a5a2b"></span><span>' + (t ? echap(t.nom) : 'Mur') + ' · ' + m.points.length + ' pts</span><span class="x">✖</span>';
+    el.onclick = (ev) => { if (ev.target.classList.contains('x')){ state.murs = state.murs.filter(x => x !== m); enregistrer(); majMurTypes(); majMurs(); redraw(); } };
     c.appendChild(el);
   });
 }
@@ -556,14 +584,25 @@ document.getElementById('dtTelecharger').onclick = () => {
 document.getElementById('dtCharger').onclick = () => {
   try {
     const o = JSON.parse(document.getElementById('dtZone').value);
-    if (o.types && o.zones){ appliquer(o); enregistrer(); majTypes(); majZones(); majMurs(); majMurEtat(); redraw(); dlgTexte.close(); }
+    if (o.types && o.zones){ appliquer(o); enregistrer(); majTypes(); majZones(); majMurTypes(); majMurs(); majMurEtat(); redraw(); dlgTexte.close(); }
     else alert('Fichier non reconnu.');
   } catch(err){ alert('Texte illisible : ' + err.message); }
 };
 document.getElementById('dtFermer').onclick = () => dlgTexte.close();
 
-function exportObj(){ return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, maj, types: state.types, zones: state.zones, murs: state.murs, murModule: state.murModule || null }; }
-function appliquer(o){ state = { types:o.types, zones:o.zones, murs:o.murs||[], murModule:o.murModule||null }; maj = o.maj || Date.now(); prochainId = Math.max(0,...state.zones.map(z=>z.id||0),...state.murs.map(m=>m.id||0)) + 1; }
+function exportObj(){ return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, maj, types: state.types, zones: state.zones, murs: state.murs, murTypes: state.murTypes, murCourant: state.murCourant || null }; }
+function migrerMurs(o){
+  const murTypes = o.murTypes ? o.murTypes.slice() : [];
+  let murs = o.murs || [];
+  if (!murTypes.length && o.murModule){ murTypes.push({ id:'w0', nom:'Mur', module:o.murModule }); murs = murs.map(m => ({ ...m, typeMur: m.typeMur || 'w0' })); }
+  return { murs, murTypes, murCourant: o.murCourant || (murTypes[0] ? murTypes[0].id : null) };
+}
+function appliquer(o){
+  const m = migrerMurs(o);
+  state = { types:o.types, zones:o.zones, murs:m.murs, murTypes:m.murTypes, murCourant:m.murCourant };
+  maj = o.maj || Date.now();
+  prochainId = Math.max(0,...state.zones.map(z=>z.id||0),...state.murs.map(mm=>mm.id||0)) + 1;
+}
 
 // ————————————————— Sauvegarde (serveur + navigateur) —————————————————
 let tSauve = null;
@@ -584,7 +623,7 @@ function majEtat(serveur){
 }
 function chargerLocal(){
   try { const s = JSON.parse(localStorage.getItem(CLE) || 'null');
-    if (s && s.types && s.zones){ state = { types:s.types, zones:s.zones, murs:s.murs||[], murModule:s.murModule||null }; maj = s.maj || 0; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0),...(s.murs||[]).map(m=>m.id||0))+1); }
+    if (s && s.types && s.zones){ const m = migrerMurs(s); state = { types:s.types, zones:s.zones, murs:m.murs, murTypes:m.murTypes, murCourant:m.murCourant }; maj = s.maj || 0; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0),...m.murs.map(x=>x.id||0))+1); }
   } catch(e){}
 }
 async function chargerServeur(){
@@ -602,14 +641,14 @@ async function init(){
   chargerLocal();
   const duServeur = await chargerServeur();       // le + récent (serveur ou local) gagne
   majEtat(duServeur);
-  ajusterTaille(); setMode('pinceau'); majTypes(); majZones(); majMurs(); majMurEtat(); redraw();
+  ajusterTaille(); setMode('pinceau'); majTypes(); majZones(); majMurTypes(); majMurs(); majMurEtat(); redraw();
 }
 init();
 
 window.__atelier = {
   get state(){ return state; }, get view(){ return view; }, get apercu(){ return apercuPt; }, get cur(){ return cur; },
   ajouterZoneMonde(typeId, ptsMonde){ typeCourant = typeId; cur = ptsMonde.slice(); terminerZone(); },
-  ajouterMurMonde(module64, ptsMonde){ if (module64) state.murModule = module64; cur = ptsMonde.slice(); terminerMur(); },
+  ajouterMurMonde(module64, ptsMonde, nom){ if (module64){ const id='w'+Date.now().toString(36); state.murTypes.push({ id, nom:nom||'Test', module:module64 }); state.murCourant=id; } cur = ptsMonde.slice(); terminerMur(); },
   export(){ return exportObj(); }
 };
 </script>
