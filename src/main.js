@@ -26,6 +26,7 @@ import { LoupUI } from './loup.js';
 import { Personnalisation } from './avatar.js';
 import { installerBoiteAIdees } from './ideas.js';
 import { chargerDecors } from './decors.js';
+import { chargerMurs } from './murs.js';
 
 async function demarrer() {
   const ui = new UI();
@@ -37,6 +38,9 @@ async function demarrer() {
 
   // Décors créés dans l'atelier (objets + collisions). Vide si pas de fichier decors.json.
   const empreintesDecors = await chargerDecors(scene, carte);
+  // Murs tracés dans l'atelier de peinture (répétition d'un module le long du tracé).
+  const empreintesMurs = await chargerMurs(scene, carte);
+  const empreintes = empreintesDecors.concat(empreintesMurs);
 
   // État de la partie.
   let pseudo = 'Anonyme';
@@ -61,7 +65,7 @@ async function demarrer() {
     if (p) pseudo = p;
     controls = new Controls(renderer.domElement);
     player = new Player(carte, controls, (hors) => ui.horsLimites(hors));
-    player.collideursDecors = empreintesDecors;   // collisions des décors
+    player.collideursDecors = empreintes;   // collisions des décors + murs
 
     if (mode === 'multi' || mode === 'loup') {
       net = new Net(scene, pseudo, skin);

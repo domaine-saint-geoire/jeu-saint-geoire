@@ -2,7 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Atelier de peinture — Domaine de Saint-Geoire</title>
 <!--
   atelier-carte.html — L'ATELIER DE PEINTURE de Gaétan (V2).
@@ -140,6 +143,17 @@
       </div>
 
       <div class="bloc">
+        <h2>Murs 🧱 (<span id="murCount">0</span>)</h2>
+        <div id="murEtat" class="hint">Colle d'abord le module de mur (.glb) de Thomas.</div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnMurGlb">📎 Coller le mur (.glb)</button>
+          <button id="mMur">🧱 Tracer un mur</button>
+        </div>
+        <input type="file" id="murFichier" accept=".glb,model/gltf-binary" style="display:none">
+        <div class="zlist" id="murList" style="margin-top:8px"></div>
+      </div>
+
+      <div class="bloc">
         <h2>Sauvegarde</h2>
         <div id="etatSauve">…</div>
         <div class="row" style="margin-top:8px">
@@ -197,10 +211,10 @@ const TYPES_DEFAUT = [
   { id:'feuillus', nom:'Bois de feuillus',     cat:'arbres', couleur:'#2e6b37' },
   { id:'bambou',   nom:'Bambouseraie',         cat:'arbres', couleur:'#a6c34c' },
 ];
-let state = { types: JSON.parse(JSON.stringify(TYPES_DEFAUT)), zones: [] };
+let state = { types: JSON.parse(JSON.stringify(TYPES_DEFAUT)), zones: [], murs: [], murModule: null };
 let maj = 0;                 // horodatage de la dernière modif (pour choisir la version la + récente)
 let typeCourant = 'pre';
-let mode = 'pinceau';        // 'pinceau' | 'points' | 'select'
+let mode = 'pinceau';        // 'pinceau' | 'points' | 'nav' | 'select' | 'mur'
 let cur = [];                // tracé en cours (points MONDE)
 let dessine = false;
 let zoneSel = null;
@@ -271,15 +285,28 @@ function redraw(){
   if (imgOk){ const s = FRAME * drawScale(); ctx.drawImage(img, view.panX, view.panY, s, s); }
   else { ctx.fillStyle = '#0c0f08'; ctx.fillRect(0,0,W,H); }
   for (const z of state.zones) dessinerPolygone(z.pts, couleurType(z.type), z.id === zoneSel, false);
+  for (const m of state.murs) dessinerMur(m.points, false);
   if (cur.length){
-    dessinerPolygone(cur, couleurType(typeCourant), true, true);
-    if (mode === 'points' && apercuPt){                    // ligne pointillée qui suit la souris
-      const [x1,y1] = mondeVersToile(cur[cur.length-1][0], cur[cur.length-1][1]);
-      const [x2,y2] = mondeVersToile(apercuPt[0], apercuPt[1]);
-      ctx.save(); ctx.setLineDash([5,5]); ctx.lineWidth = 1.5; ctx.strokeStyle = couleurType(typeCourant);
-      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+    if (mode === 'mur'){ dessinerMur(cur, true); }
+    else {
+      dessinerPolygone(cur, couleurType(typeCourant), true, true);
+      if (mode === 'points' && apercuPt){                    // ligne pointillée qui suit la souris
+        const [x1,y1] = mondeVersToile(cur[cur.length-1][0], cur[cur.length-1][1]);
+        const [x2,y2] = mondeVersToile(apercuPt[0], apercuPt[1]);
+        ctx.save(); ctx.setLineDash([5,5]); ctx.lineWidth = 1.5; ctx.strokeStyle = couleurType(typeCourant);
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+      }
     }
   }
+}
+function dessinerMur(pts, actif){
+  if (!pts.length) return;
+  ctx.save();
+  ctx.beginPath();
+  pts.forEach((p,i)=>{ const [x,y]=mondeVersToile(p[0],p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.lineWidth = actif ? 5 : 4; ctx.strokeStyle = '#8a5a2b'; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+  ctx.restore();
+  pts.forEach((p)=>{ const [x,y]=mondeVersToile(p[0],p[1]); ctx.fillStyle='#d0954a'; ctx.beginPath(); ctx.arc(x,y,3.5,0,7); ctx.fill(); });
 }
 function dessinerPolygone(ptsMonde, couleur, actif, ouvert){
   if (!ptsMonde.length) return;
@@ -311,7 +338,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (mode === 'select'){ selectionnerZoneAu(cx, cy); return; }
   const p = toileVersMonde(cx, cy);
   if (mode === 'pinceau'){ cur = [p]; dessine = true; cv.setPointerCapture(e.pointerId); }
-  else if (mode === 'points'){ cur.push(p); redraw(); }
+  else if (mode === 'points' || mode === 'mur'){ cur.push(p); redraw(); }
 });
 cv.addEventListener('pointermove', (e) => {
   const [cx, cy] = posSouris(e);
@@ -355,7 +382,7 @@ document.getElementById('zReset').onclick = () => { view.z = 1; clampView(); red
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.code === 'Space'){ espace = true; e.preventDefault(); }
-  else if (e.key === 'Enter') terminerZone();
+  else if (e.key === 'Enter') terminer();
   else if (e.key === 'Escape'){ cur = []; apercuPt = null; redraw(); }
   else if (e.key === 'Backspace'){ cur.pop(); redraw(); }
 });
@@ -367,6 +394,13 @@ function terminerZone(){
   state.zones.push({ id: prochainId++, type: typeCourant, pts: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
   cur = []; apercuPt = null; enregistrer(); majZones(); majTypes(); redraw();
 }
+function terminerMur(){
+  if (!state.murModule){ alert('Colle d\'abord le module de mur (.glb) de Thomas (bouton « Coller le mur »).'); return; }
+  if (cur.length < 2){ if (cur.length) alert('Un mur : clique au moins 2 points.'); return; }
+  state.murs.push({ id: prochainId++, points: cur.map(p => [ +p[0].toFixed(2), +p[1].toFixed(2) ]) });
+  cur = []; apercuPt = null; enregistrer(); majMurs(); redraw();
+}
+function terminer(){ if (mode === 'mur') terminerMur(); else terminerZone(); }
 function selectionnerZoneAu(cx, cy){
   const [wx, wz] = toileVersMonde(cx, cy);
   for (let i = state.zones.length - 1; i >= 0; i--){ if (dansPolygone(wx, wz, state.zones[i].pts)){ zoneSel = state.zones[i].id; majZones(); redraw(); return; } }
@@ -418,11 +452,13 @@ function setMode(m){
   document.getElementById('mPoints').classList.toggle('on', m==='points');
   document.getElementById('mNav').classList.toggle('on', m==='nav');
   document.getElementById('mSelect').classList.toggle('on', m==='select');
+  document.getElementById('mMur').classList.toggle('on', m==='mur');
   const aides = {
     pinceau: "Pinceau : garde appuyé et longe le contour, relâche pour terminer. (Molette = zoom)",
     points: "Points : clique chaque coin ; la ligne suit ta souris. Double-clic (ou « Terminer ») pour fermer.",
     nav: "Déplacer : clique-glisse pour te promener sur la carte. Molette / pincement pour zoomer.",
-    select: "Sélection : clique une zone, puis « ✖ » dans la liste pour la retirer."
+    select: "Sélection : clique une zone, puis « ✖ » dans la liste pour la retirer.",
+    mur: "Mur : clique les coins du mur, puis « Terminer » (double-clic / Entrée). Le module de Thomas se répète tout du long."
   };
   document.getElementById('aide').textContent = aides[m] || '';
   cv.style.cursor = m==='nav' ? 'grab' : m==='select' ? 'pointer' : 'crosshair';
@@ -432,6 +468,37 @@ document.getElementById('mPinceau').onclick = () => setMode('pinceau');
 document.getElementById('mPoints').onclick  = () => setMode('points');
 document.getElementById('mNav').onclick     = () => setMode('nav');
 document.getElementById('mSelect').onclick  = () => setMode('select');
+document.getElementById('mMur').onclick     = () => setMode('mur');
+
+// Coller le module de mur (.glb) → stocké en base64 (le jeu le répétera le long du tracé).
+document.getElementById('btnMurGlb').onclick = () => document.getElementById('murFichier').click();
+document.getElementById('murFichier').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const u8 = new Uint8Array(r.result); let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    state.murModule = btoa(s);
+    majMurEtat(); enregistrer();
+    if (mode !== 'mur') setMode('mur');
+  };
+  r.readAsArrayBuffer(f);
+});
+function majMurEtat(){
+  document.getElementById('murEtat').innerHTML = state.murModule
+    ? '✅ Module de mur chargé — clique « Tracer un mur » et dessine ton tracé.'
+    : 'Colle d\'abord le module de mur (.glb) de Thomas.';
+}
+function majMurs(){
+  document.getElementById('murCount').textContent = state.murs.length;
+  const c = document.getElementById('murList'); c.innerHTML = '';
+  state.murs.forEach((m) => {
+    const el = document.createElement('div'); el.className = 'z';
+    el.innerHTML = '<span class="pastille" style="background:#8a5a2b"></span><span>Mur · ' + m.points.length + ' points</span><span class="x">✖</span>';
+    el.onclick = (ev) => { if (ev.target.classList.contains('x')){ state.murs = state.murs.filter(x => x !== m); enregistrer(); majMurs(); redraw(); } };
+    c.appendChild(el);
+  });
+}
 
 // Plein écran
 const btnFull = document.getElementById('btnFull');
@@ -443,10 +510,10 @@ document.addEventListener('fullscreenchange', () => {
   btnFull.textContent = document.fullscreenElement ? '⛶ Quitter le plein écran' : '⛶ Plein écran';
   setTimeout(() => { ajusterTaille(); redraw(); }, 120);
 });
-document.getElementById('btnTerminer').onclick = terminerZone;
+document.getElementById('btnTerminer').onclick = terminer;
 document.getElementById('btnAnnulerPt').onclick = () => { cur.pop(); redraw(); };
 document.getElementById('btnCancel').onclick = () => { cur = []; apercuPt = null; redraw(); };
-cv.addEventListener('dblclick', () => { if (mode === 'points') terminerZone(); });
+cv.addEventListener('dblclick', () => { if (mode === 'points' || mode === 'mur') terminer(); });
 
 // Nouveau type
 const dlgType = document.getElementById('dlgType');
@@ -489,14 +556,14 @@ document.getElementById('dtTelecharger').onclick = () => {
 document.getElementById('dtCharger').onclick = () => {
   try {
     const o = JSON.parse(document.getElementById('dtZone').value);
-    if (o.types && o.zones){ appliquer(o); enregistrer(); majTypes(); majZones(); redraw(); dlgTexte.close(); }
+    if (o.types && o.zones){ appliquer(o); enregistrer(); majTypes(); majZones(); majMurs(); majMurEtat(); redraw(); dlgTexte.close(); }
     else alert('Fichier non reconnu.');
   } catch(err){ alert('Texte illisible : ' + err.message); }
 };
 document.getElementById('dtFermer').onclick = () => dlgTexte.close();
 
-function exportObj(){ return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, maj, types: state.types, zones: state.zones }; }
-function appliquer(o){ state = { types:o.types, zones:o.zones }; maj = o.maj || Date.now(); prochainId = Math.max(0,...state.zones.map(z=>z.id||0)) + 1; }
+function exportObj(){ return { version:1, repere:{ taille_m:TAILLE_MONDE_M, origine:'centre', haut:'nord' }, maj, types: state.types, zones: state.zones, murs: state.murs, murModule: state.murModule || null }; }
+function appliquer(o){ state = { types:o.types, zones:o.zones, murs:o.murs||[], murModule:o.murModule||null }; maj = o.maj || Date.now(); prochainId = Math.max(0,...state.zones.map(z=>z.id||0),...state.murs.map(m=>m.id||0)) + 1; }
 
 // ————————————————— Sauvegarde (serveur + navigateur) —————————————————
 let tSauve = null;
@@ -517,7 +584,7 @@ function majEtat(serveur){
 }
 function chargerLocal(){
   try { const s = JSON.parse(localStorage.getItem(CLE) || 'null');
-    if (s && s.types && s.zones){ state = { types:s.types, zones:s.zones }; maj = s.maj || 0; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0))+1); }
+    if (s && s.types && s.zones){ state = { types:s.types, zones:s.zones, murs:s.murs||[], murModule:s.murModule||null }; maj = s.maj || 0; prochainId = s.prochainId || (Math.max(0,...state.zones.map(z=>z.id||0),...(s.murs||[]).map(m=>m.id||0))+1); }
   } catch(e){}
 }
 async function chargerServeur(){
@@ -535,13 +602,14 @@ async function init(){
   chargerLocal();
   const duServeur = await chargerServeur();       // le + récent (serveur ou local) gagne
   majEtat(duServeur);
-  ajusterTaille(); setMode('pinceau'); majTypes(); majZones(); redraw();
+  ajusterTaille(); setMode('pinceau'); majTypes(); majZones(); majMurs(); majMurEtat(); redraw();
 }
 init();
 
 window.__atelier = {
   get state(){ return state; }, get view(){ return view; }, get apercu(){ return apercuPt; }, get cur(){ return cur; },
   ajouterZoneMonde(typeId, ptsMonde){ typeCourant = typeId; cur = ptsMonde.slice(); terminerZone(); },
+  ajouterMurMonde(module64, ptsMonde){ if (module64) state.murModule = module64; cur = ptsMonde.slice(); terminerMur(); },
   export(){ return exportObj(); }
 };
 </script>
