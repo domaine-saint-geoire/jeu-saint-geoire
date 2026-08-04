@@ -27,7 +27,7 @@ import { Personnalisation } from './avatar.js';
 import { installerBoiteAIdees } from './ideas.js';
 import { chargerDecors } from './decors.js';
 import { chargerMurs } from './murs.js';
-import { texturerSol } from './textures.js';
+import { preparerSol } from './textures.js';
 
 async function demarrer() {
   const ui = new UI();
@@ -35,8 +35,8 @@ async function demarrer() {
 
   // Carte (2 images) + terrain habillé (satellite + zones peintes : herbe, gravier…).
   const carte = await Carte.charger();
-  const textureSol = await texturerSol(carte);
-  scene.add(construireTerrain(carte, textureSol));
+  const sol = await preparerSol(carte);
+  scene.add(construireTerrain(carte, sol));
 
   // Décors créés dans l'atelier (objets + collisions). Vide si pas de fichier decors.json.
   const empreintesDecors = await chargerDecors(scene, carte);

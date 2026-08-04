@@ -29,7 +29,9 @@
     #menu .mode:disabled { opacity:.5; cursor:default; }
     #menu .soon { font-size:11px; font-weight:700; background:var(--or); color:#1a1205;
       border-radius:99px; padding:2px 8px; margin-left:2px; }
-    #menu .lienAtelier { display:inline-block; margin-top:18px; color:#c7d4c2; font-size:13.5px;
+    #menu .ateliers { margin-top:22px; display:flex; flex-direction:column; gap:9px; align-items:center; }
+    #menu .atLabel { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#9fb098; font-weight:700; margin-bottom:1px; }
+    #menu .lienAtelier { display:inline-block; color:#c7d4c2; font-size:13.5px;
       text-decoration:none; border-bottom:1px dashed rgba(255,255,255,.4); padding-bottom:2px; }
     #menu .lienAtelier:hover { color:var(--or); border-color:var(--or); }
 
@@ -134,7 +136,12 @@
       <button class="mode" id="mSolo">🚶 Visite solo</button>
       <button class="mode" id="mMulti">🌍 Visite à plusieurs</button>
       <button class="mode" id="mLoup">🐺 Loup touche-touche</button>
-      <a class="lienAtelier" href="atelier/atelier-carte.html">🎨 Peindre la carte (atelier)</a>
+      <div class="ateliers">
+        <div class="atLabel">🛠 Ateliers de création</div>
+        <a class="lienAtelier" href="atelier/atelier-carte.html">🎨 Carte : zones & murs</a>
+        <a class="lienAtelier" href="atelier/atelier-decors.html">🧊 Objets 3D (cousins)</a>
+        <a class="lienAtelier" href="atelier/sons.html">🔊 Sons</a>
+      </div>
     </div>
   </div>
 

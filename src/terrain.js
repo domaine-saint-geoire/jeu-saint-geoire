@@ -11,11 +11,11 @@ import { MONDE } from './config.js';
 
 /**
  * @param {import('./carte.js').Carte} carte
- * @param {THREE.Texture} [textureSol]  texture du sol déjà préparée (satellite + zones peintes) ;
- *   si absente, on drape simplement le satellite.
+ * @param {{grass:THREE.Texture,gravel:THREE.Texture,mask:THREE.Texture,repeat:number}} [sol]
+ *   habillage des zones (herbe/gravier répétés + masque) ; si absent, satellite seul.
  * @returns {THREE.Mesh} le sol, prêt à être ajouté à la scène
  */
-export function construireTerrain(carte, textureSol) {
+export function construireTerrain(carte, sol) {
   const taille = carte.tailleM;
   const seg = MONDE.SUBDIVISIONS;
 
@@ -37,18 +37,38 @@ export function construireTerrain(carte, textureSol) {
   uv.needsUpdate = true;
   geo.computeVertexNormals(); // normales correctes → éclairage des pentes réaliste
 
-  // Texture du sol : soit celle préparée (satellite + zones peintes), soit le satellite seul.
-  // flipY=false pour que la 1re ligne de l'image (le nord) corresponde à v=0, comme dans altitudeAt.
-  let texture = textureSol;
-  if (!texture) {
-    texture = new THREE.Texture(carte.satellite);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.flipY = false;
-    texture.anisotropy = 4;
-    texture.needsUpdate = true;
+  // Satellite drapé (flipY=false : 1re ligne de l'image = nord = v=0, comme altitudeAt).
+  const satellite = new THREE.Texture(carte.satellite);
+  satellite.colorSpace = THREE.SRGBColorSpace;
+  satellite.flipY = false;
+  satellite.anisotropy = 4;
+  satellite.needsUpdate = true;
+
+  const materiau = new THREE.MeshStandardMaterial({ map: satellite, roughness: 1, metalness: 0 });
+
+  // Habillage des zones : dans le rendu, on remplace le satellite par de l'herbe / du
+  // gravier RÉPÉTÉS (détail net de près) là où le masque l'indique (rouge=herbe, vert=gravier).
+  if (sol) {
+    materiau.onBeforeCompile = (shader) => {
+      shader.uniforms.uGrass = { value: sol.grass };
+      shader.uniforms.uGravel = { value: sol.gravel };
+      shader.uniforms.uMask = { value: sol.mask };
+      shader.uniforms.uRepeat = { value: sol.repeat };
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>',
+          '#include <common>\nuniform sampler2D uGrass;\nuniform sampler2D uGravel;\nuniform sampler2D uMask;\nuniform float uRepeat;')
+        .replace('#include <map_fragment>',
+          '#include <map_fragment>\n{'
+          + ' vec4 mk = texture2D(uMask, vMapUv);'
+          + ' vec3 herbe = pow(texture2D(uGrass, vMapUv * uRepeat).rgb, vec3(2.2));'
+          + ' vec3 grav = pow(texture2D(uGravel, vMapUv * uRepeat).rgb, vec3(2.2));'
+          + ' diffuseColor.rgb = mix(diffuseColor.rgb, herbe, clamp(mk.r, 0.0, 1.0));'
+          + ' diffuseColor.rgb = mix(diffuseColor.rgb, grav, clamp(mk.g, 0.0, 1.0));'
+          + ' }');
+    };
+    materiau.customProgramCacheKey = () => 'sol-zones';
   }
 
-  const materiau = new THREE.MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 });
   const mesh = new THREE.Mesh(geo, materiau);
   mesh.name = 'terrain';
   return mesh;

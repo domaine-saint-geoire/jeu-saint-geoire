@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sons — Domaine de Saint-Geoire</title>
+<style>
+  :root{ --vert:#3a5a40; --vert2:#22301f; --or:#e5a83e; --ink:#eef3ea; --line:#33402f; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; background:linear-gradient(160deg,var(--vert),var(--vert2)); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 20px 60px; }
+  a.retour{ color:#c7d4c2; font-size:14px; text-decoration:none; }
+  a.retour:hover{ color:var(--or); }
+  h1{ font-size:26px; margin:14px 0 4px; }
+  .sub{ color:#c7d4c2; margin:0 0 22px; }
+  .card{ background:rgba(0,0,0,.18); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:14px 0; }
+  .card h2{ font-size:17px; margin:0 0 8px; }
+  .tag{ display:inline-block; font-size:11px; font-weight:700; background:var(--or); color:#1a1205; border-radius:99px; padding:2px 9px; }
+  ol{ margin:8px 0 0; padding-left:20px; line-height:1.6; }
+  ol li{ margin:6px 0; }
+  code{ background:rgba(0,0,0,.3); padding:1px 6px; border-radius:5px; font-size:13px; }
+  .fam{ display:flex; gap:10px; align-items:flex-start; margin:10px 0; }
+  .fam .ic{ font-size:20px; }
+  .fam b{ color:#fff; }
+  .fam span{ color:#c7d4c2; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="retour" href="../index.html">← Retour au jeu</a>
+  <h1>🔊 Les sons <span class="tag">bientôt jouable</span></h1>
+  <p class="sub">L'atelier de sons arrive. Voici comment ça marchera, et ce que tu peux préparer dès maintenant.</p>
+
+  <div class="card">
+    <h2>Les 3 familles de sons</h2>
+    <div class="fam"><div class="ic">🐦</div><div><b>Ambiance</b> — <span>en boucle partout (oiseaux, vent…).</span></div></div>
+    <div class="fam"><div class="ic">⛲</div><div><b>Lieux</b> — <span>localisés : forts au centre, s'éteignent au bord (la fontaine, la cascade…). Tu dessines la zone où on l'entend.</span></div></div>
+    <div class="fam"><div class="ic">👣</div><div><b>Pas</b> — <span>le bruit quand on marche, selon le sol (herbe / gravier).</span></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Le process, étape par étape</h2>
+    <ol>
+      <li>Tu récupères tes sons : <b>tes enregistrements du relevé</b> + la banque gratuite <a href="https://freesound.org" target="_blank" rel="noopener" style="color:var(--or)">freesound.org</a> (licence CC0) pour compléter.</li>
+      <li>Tu me les envoies (ou tu les déposes dans le dossier <code>monde/sons/</code>).</li>
+      <li>Tu me dis <b>quoi va où</b> : quelle ambiance, quels sons de lieu (avec l'endroit + le rayon), quels bruits de pas.</li>
+      <li>Je <b>branche le moteur</b> (son 3D + ambiance + bruits de pas) et j'ajoute un <b>onglet Réglages</b> pour doser les volumes.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Un onglet Réglages</h2>
+    <p style="margin:6px 0 0;color:#c7d4c2;font-size:14px">Dans le jeu, tu pourras régler le volume général et de chaque famille (ambiance / lieux / pas), ou tout couper.</p>
+  </div>
+
+  <p style="color:#9fb098;font-size:13px;margin-top:18px">Dès que tu as des sons, reviens me voir avec les fichiers + les emplacements, et je rends tout ça vivant. 🌿</p>
+</div>
+</body>
+</html>
